@@ -75,4 +75,6 @@ UV_CACHE_DIR=/tmp/anonymous-diary-uv-cache uv run --group dev python /home/encai
 UV_CACHE_DIR=/tmp/anonymous-diary-uv-cache uv run --group dev python tests/test_gas_source.py
 ```
 
+最後のコマンドは `test_` で始まる全テスト関数を自動検出して実行し、成功時に実行件数と `local GAS source tests passed.` を表示します。
+
 通常の書き込み可能な開発環境では `UV_CACHE_DIR` の指定は不要です。`.venv/` はローカル環境のためリポジトリには含めません。

@@ -325,6 +325,48 @@ def test_photo_metadata_is_internal_and_attachments_are_anonymous() -> None:
     assert "anonymous-photo-" in mail_source
 
 
+def test_photo_cleanup_failure_is_not_treated_as_success() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      SlidesApp = { create: function() { return {
+        getId: function() { return 'temporary-presentation'; },
+        getSlides: function() { return [{ getPageElements: function() { return []; } }]; }
+      }; } };
+      DriveApp = { getFileById: function() { return {
+        setTrashed: function() { throw new Error('trash failed'); }
+      }; } };
+    ''')
+    try:
+        context.eval("rasterizePhotoBlobs_([])")
+    except quickjs.JSException as error:
+        assert "Temporary photo presentation cleanup failed" in str(error)
+    else:
+        raise AssertionError("Photo cleanup failure must not be treated as success")
+
+
+def test_management_entrypoint_failures_notify_admins() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var notifiedContexts = [];
+      notifyAdminsOfError = function(context) { notifiedContexts.push(context); };
+      getSpreadsheet_ = function() { throw new Error('spreadsheet unavailable'); };
+      getConfig_ = function() { throw new Error('configuration unavailable'); };
+      SpreadsheetApp = { getUi: function() { throw new Error('UI unavailable'); } };
+    ''')
+    for expression in ("initializeSpreadsheet()", "installTriggers()", "addParticipantFromPrompt()"):
+        try:
+            context.eval(expression)
+        except quickjs.JSException:
+            pass
+        else:
+            raise AssertionError(f"{expression} must preserve the original failure")
+    assert json.loads(context.eval("JSON.stringify(notifiedContexts)")) == [
+        "initializeSpreadsheet", "installTriggers", "addParticipant"
+    ]
+
+
 def test_participant_mail_does_not_render_internal_identifiers() -> None:
     context = quickjs.Context()
     load_gas_sources(context)
@@ -352,26 +394,7 @@ def test_no_checked_in_clasp_credentials() -> None:
 
 
 if __name__ == "__main__":
-    test_local_gas_self_tests()
-    test_mail_is_centrally_routed()
-    test_failed_delivery_retry_policy_is_explicit()
-    test_retry_sends_only_error_deliveries()
-    test_daily_run_records_delivery_failure_as_error()
-    test_delivered_mail_is_not_reopened_when_participant_is_inactive()
-    test_successful_send_with_failed_status_update_stays_processing()
-    test_inactive_participants_are_excluded_from_matching()
-    test_processing_resolution_requires_explicit_state()
-    test_processing_comment_resolution_requires_explicit_state()
-    test_matching_handles_fifty_participants_without_duplicates()
-    test_duplicate_delivery_log_is_rejected()
-    test_retry_stops_before_sending_duplicate_delivery_log()
-    test_logs_do_not_include_admin_recipient()
-    test_error_notification_attempts_every_admin()
-    test_daily_lock_failure_notifies_admins()
-    test_comment_url_exposes_only_random_token()
-    test_comment_source_does_not_read_google_identity()
-    test_archive_cutoff_and_csv_safety()
-    test_photo_metadata_is_internal_and_attachments_are_anonymous()
-    test_participant_mail_does_not_render_internal_identifiers()
-    test_no_checked_in_clasp_credentials()
-    print("Local GAS source tests passed.")
+    tests = [value for name, value in globals().items() if name.startswith("test_") and callable(value)]
+    for test in sorted(tests, key=lambda value: value.__name__):
+        test()
+    print(f"{len(tests)} local GAS source tests passed.")
