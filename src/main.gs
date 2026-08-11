@@ -307,6 +307,7 @@ function onOpen() {
     .addItem('失敗したコメント通知を再送', 'retryFailedCommentNotificationsFromPrompt')
     .addItem('コメント通知のprocessingを確認', 'resolveProcessingCommentFromPrompt')
     .addItem('旧データをアーカイブして削除', 'archiveOldDataFromPrompt')
-    .addItem('自己テストを実行', 'runMvpSelfTests')
+    .addItem('管理者通知をテスト', 'sendAdminAlertTest')
+    .addItem('自己テストを実行', 'runMvpSelfTestsFromMenu')
     .addToUi();
 }

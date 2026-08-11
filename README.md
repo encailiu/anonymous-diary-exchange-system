@@ -53,6 +53,8 @@ GAS の実装は次の責務ごとに分割します。
 
 ## ドキュメント
 
+- [運用者向けセットアップマニュアル](SETUP.md)
+- [非エンジニア向け動作確認手順書・チェックリスト](VERIFICATION.md)
 - [基本仕様](docs/1-basic-spec-v1.0.md)
 - [要求仕様](docs/2-require-spec-v1.0.md)
 - [基本設計](docs/3-basic-design-v1.0.md)

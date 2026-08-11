@@ -12,6 +12,12 @@ function runMvpSelfTests() {
   return 'MVP self-tests passed.';
 }
 
+function runMvpSelfTestsFromMenu() {
+  var result = runMvpSelfTests();
+  SpreadsheetApp.getUi().alert(result);
+  return result;
+}
+
 function testCommentToken_() {
   assert_(/^[a-f0-9]{64}$/i.test(createCommentToken_()), 'Comment token must contain 64 random hexadecimal characters.');
 }

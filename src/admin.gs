@@ -135,3 +135,8 @@ function archiveOldDataFromPrompt() {
   var manifest = archiveOldData(beforeDate);
   ui.alert(manifest.files.reduce(function(total, file) { return total + file.rowCount; }, 0) + '行をアーカイブして削除しました。');
 }
+
+function sendAdminAlertTest() {
+  notifyAdminsOfError('管理者通知テスト', new Error('これは動作確認用の通知です。システム障害ではありません。'));
+  SpreadsheetApp.getUi().alert('管理者通知テストを送信しました。ADMIN_EMAILSの全員で受信を確認してください。');
+}
