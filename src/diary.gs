@@ -15,7 +15,8 @@ function onDiaryFormSubmit(event) {
       if (participant && hasAcceptedDiary_(participant.participantId, diaryDate)) status = 'rejected_duplicate';
       appendRecord_('Diaries', {
         diary_id: createId_(), diary_date: diaryDate, submitted_at: formatJst_(submittedAt, 'yyyy-MM-dd HH:mm:ss'),
-        participant_id: participant ? participant.participantId : '', email: email, body: body, status: status
+        participant_id: participant ? participant.participantId : '', email: status === 'accepted' ? email : '',
+        body: status === 'accepted' ? body : '', status: status
       });
       return status;
     } catch (error) {

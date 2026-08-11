@@ -25,6 +25,14 @@ function addDaysToDateKey_(dateKey, days) {
   return Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd');
 }
 
+function isValidDateKey_(dateKey) {
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey));
+  if (!match) return false;
+  var date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.getUTCFullYear() === Number(match[1]) &&
+    date.getUTCMonth() === Number(match[2]) - 1 && date.getUTCDate() === Number(match[3]);
+}
+
 function withScriptLock_(callback) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Another exchange operation is already running.');

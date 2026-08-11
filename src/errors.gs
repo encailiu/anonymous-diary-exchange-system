@@ -17,7 +17,7 @@ function notifyAdminsOfError(context, error) {
     try {
       sendSystemMail(email, '【緊急アラート】匿名日記システムでエラーが発生しました', body);
     } catch (mailError) {
-      console.error('Administrator notification failed for ' + email + ': ' + mailError.message);
+      console.error('Administrator notification failed.');
     }
   });
 }

@@ -10,17 +10,49 @@ function createMatches_(diaries, recentPairKeys, skipCounts, lastSkippedParticip
     skipped = selectSkippedDiary_(remaining, skipCounts, lastSkippedParticipantId, randomFn);
     remaining = remaining.filter(function(diary) { return diary.participant_id !== skipped.participant_id; });
   }
-  shuffle_(remaining, randomFn);
-  var pairs = [];
-  while (remaining.length > 0) {
-    var first = remaining.shift();
-    var candidateIndex = remaining.findIndex(function(candidate) {
-      return !recentPairKeys[pairKey_(first.participant_id, candidate.participant_id)];
-    });
-    if (candidateIndex < 0) candidateIndex = 0;
-    pairs.push([first, remaining.splice(candidateIndex, 1)[0]]);
-  }
+  var pairs = findPairingAvoidingRecent_(remaining, recentPairKeys, randomFn);
   return { pairs: pairs, skipped: skipped };
+}
+
+function findPairingAvoidingRecent_(diaries, recentPairKeys, random) {
+  var best = null;
+  var bestRecentCount = Infinity;
+  var visited = 0;
+  var maxVisited = 20000;
+  var shuffled = diaries.slice();
+  shuffle_(shuffled, random);
+
+  function search(remaining, pairs, recentCount) {
+    visited += 1;
+    if (visited > maxVisited || recentCount >= bestRecentCount) return;
+    if (remaining.length === 0) {
+      best = pairs.slice();
+      bestRecentCount = recentCount;
+      return;
+    }
+    var first = remaining[0];
+    var candidates = remaining.slice(1).map(function(candidate, index) {
+      return {
+        candidate: candidate,
+        index: index + 1,
+        recent: recentPairKeys[pairKey_(first.participant_id, candidate.participant_id)] ? 1 : 0
+      };
+    });
+    candidates.sort(function(left, right) { return left.recent - right.recent; });
+    for (var index = 0; index < candidates.length; index += 1) {
+      var choice = candidates[index];
+      var next = remaining.slice(1);
+      next.splice(choice.index - 1, 1);
+      search(next, pairs.concat([[first, choice.candidate]]), recentCount + choice.recent);
+      if (bestRecentCount === 0) return;
+    }
+  }
+
+  search(shuffled, [], 0);
+  if (best) return best;
+  var fallback = [];
+  while (shuffled.length > 0) fallback.push([shuffled.shift(), shuffled.shift()]);
+  return fallback;
 }
 
 function selectSkippedDiary_(diaries, skipCounts, lastSkippedParticipantId, random) {

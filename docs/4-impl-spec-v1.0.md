@@ -1,6 +1,8 @@
 # 匿名日記ランダム交換システム 実装仕様書 v1.0
 
 ## 1. モジュール分割とファイル構成
+
+以下のうち `comments.gs` と、`admin.gs` のアーカイブ・削除責務は目標構成であり、現在は未実装である。
 - `config.gs`: 設定値取得（複数管理者アドレス、タイムゾーン等）
 - `main.gs`: メインエントリーポイント (`runDailyExchange`)
 - `diary.gs`: 日記データ抽出・締切判定
@@ -14,6 +16,8 @@
 - `utils.gs`: トークン生成、ロック制御、JST日時判定
 
 ## 2. アーカイブおよびデータ削除機能の実装仕様
+
+本節は後続フェーズで実装する予定仕様である。
 - `archiveOldData(beforeDate)` 関数を実装。
 - **手順**:
   1. `Diaries`, `Matches`, `Comments`, `DeliveryLog` より `diary_date` / `submitted_at` < `beforeDate` の行を取得。
@@ -40,3 +44,11 @@
 ## 4. メール配信モジュール仕様
 - `sendSystemMail(to, subject, body, htmlBody)` 関数で全メール送信を一元管理。
 - 内部では `GmailApp.sendEmail()` を呼び出し、Googleの標準機能だけで送信する。
+
+## 5. 配信状態と再送仕様
+
+- 配信の正本は `DeliveryLog.status` とし、`Matches.status` は対応する2配信の集約状態として同期する。
+- 新規配信は送信前に `processing` を記録し、成功後に `delivered`、送信例外時に `error` を記録する。
+- 日次処理は既存の配信ログを自動再送しない。未解決の `error` または `processing` があれば処理結果を成功扱いしない。
+- 管理者の明示的な再送操作では、指定日の `error` だけを対象とする。
+- `processing` は、メール送信成功後に状態更新だけが失敗した可能性を排除できないため自動・手動再送の対象にしない。管理者がGmailと実行ログを確認する。

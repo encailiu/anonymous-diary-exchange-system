@@ -5,6 +5,7 @@ require the separate Google verification environment described in SETUP.md.
 """
 
 from pathlib import Path
+import json
 
 import quickjs
 
@@ -70,6 +71,81 @@ def test_mail_is_centrally_routed() -> None:
     assert direct_send_files == ["mail.gs"]
 
 
+def test_failed_delivery_retry_policy_is_explicit() -> None:
+    source = (SOURCE_DIR / "main.gs").read_text(encoding="utf-8")
+    assert "String(row.status) === 'error'" in source
+    assert "String(row.status) === 'processing'" not in source
+
+
+def test_retry_sends_only_error_deliveries() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var sentDeliveryIds = [];
+      var currentDeliveryId = '';
+      getAcceptedDiariesForDate_ = function() { return [{ diary_id: 'd1', body: 'body' }, { diary_id: 'd2', body: 'body' }]; };
+      getParticipantsById_ = function() { return { p1: { participantId: 'p1', email: 'one@example.test' }, p2: { participantId: 'p2', email: 'two@example.test' } }; };
+      getRows_ = function(name) { return name === 'DeliveryLog' ? [
+        { _rowNumber: 2, delivery_id: 'failed', diary_date: '2026-01-01', diary_id: 'd1', recipient_participant_id: 'p1', status: 'error' },
+        { _rowNumber: 3, delivery_id: 'uncertain', diary_date: '2026-01-01', diary_id: 'd2', recipient_participant_id: 'p2', status: 'processing' }
+      ] : []; };
+      updateRecord_ = function(name, rowNumber) { if (name === 'DeliveryLog' && rowNumber === 2) currentDeliveryId = 'failed'; };
+      sendDiaryExchangeMail_ = function() { sentDeliveryIds.push(currentDeliveryId); };
+      appendRunLog_ = function() {};
+      notifyAdminsOfError = function() {};
+    ''')
+    result = json.loads(context.eval("JSON.stringify(retryFailedDeliveriesForDate_('2026-01-01'))"))
+    sent = json.loads(context.eval("JSON.stringify(sentDeliveryIds)"))
+    assert result == {"delivered": 1, "skipped": 0, "failed": 0, "processing": 0}
+    assert sent == ["failed"]
+
+
+def test_daily_run_records_delivery_failure_as_error() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var recordedStatuses = [];
+      withScriptLock_ = function(callback) { return callback(); };
+      ensureMatchesForDate_ = function() { return []; };
+      deliverPendingMatches_ = function() { return { delivered: 1, skipped: 0, failed: 1 }; };
+      appendRunLog_ = function(date, status) { recordedStatuses.push(status); };
+      notifyAdminsOfError = function() {};
+    ''')
+    context.eval("runDailyExchangeForDate_('2026-01-01')")
+    assert json.loads(context.eval("JSON.stringify(recordedStatuses)")) == ["error"]
+
+
+def test_delivered_mail_is_not_reopened_when_participant_is_inactive() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      getRows_ = function(name) { return name === 'DeliveryLog' ? [{
+        diary_date: '2026-01-01', diary_id: 'd1', recipient_participant_id: 'p1', status: 'delivered'
+      }] : []; };
+    ''')
+    outcome = context.eval("deliverDiaryOnce_('2026-01-01', { diary_id: 'd1' }, undefined, 'p1')")
+    assert outcome == "skipped"
+
+
+def test_logs_do_not_include_admin_recipient() -> None:
+    source = (SOURCE_DIR / "errors.gs").read_text(encoding="utf-8")
+    assert "failed for ' + email" not in source
+
+
+def test_error_notification_attempts_every_admin() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var notified = [];
+      PropertiesService = { getScriptProperties: function() { return {
+        getProperty: function(key) { return key === 'ADMIN_EMAILS' ? 'first@example.test,second@example.test' : ''; }
+      }; } };
+      sendSystemMail = function(to) { notified.push(to); if (notified.length === 1) throw new Error('mail failure'); };
+    ''')
+    context.eval("notifyAdminsOfError('test', new Error('failure'))")
+    assert json.loads(context.eval("JSON.stringify(notified)")) == ["first@example.test", "second@example.test"]
+
+
 def test_no_checked_in_clasp_credentials() -> None:
     assert not (ROOT / ".clasp.json").exists(), ".clasp.json must not be committed"
 
@@ -77,5 +153,11 @@ def test_no_checked_in_clasp_credentials() -> None:
 if __name__ == "__main__":
     test_local_gas_self_tests()
     test_mail_is_centrally_routed()
+    test_failed_delivery_retry_policy_is_explicit()
+    test_retry_sends_only_error_deliveries()
+    test_daily_run_records_delivery_failure_as_error()
+    test_delivered_mail_is_not_reopened_when_participant_is_inactive()
+    test_logs_do_not_include_admin_recipient()
+    test_error_notification_attempts_every_admin()
     test_no_checked_in_clasp_credentials()
     print("Local GAS source tests passed.")

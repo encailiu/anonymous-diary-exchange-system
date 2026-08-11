@@ -13,10 +13,12 @@ function getConfig_() {
   var adminEmails = parseEmailList_(properties.getProperty(CONFIG_KEYS.ADMIN_EMAILS));
   if (!spreadsheetId) throw new Error('SPREADSHEET_ID is not configured.');
   if (adminEmails.length === 0) throw new Error('ADMIN_EMAILS is not configured.');
+  var timezone = properties.getProperty(CONFIG_KEYS.TIMEZONE) || 'Asia/Tokyo';
+  if (timezone !== 'Asia/Tokyo') throw new Error('TIMEZONE must be Asia/Tokyo.');
   return {
     spreadsheetId: spreadsheetId,
     adminEmails: adminEmails,
-    timezone: properties.getProperty(CONFIG_KEYS.TIMEZONE) || 'Asia/Tokyo',
+    timezone: timezone,
     mailProvider: properties.getProperty(CONFIG_KEYS.MAIL_PROVIDER) || 'gmail',
     diaryBodyItemTitle: properties.getProperty(CONFIG_KEYS.DIARY_BODY_ITEM_TITLE) || '日記本文',
     formId: properties.getProperty(CONFIG_KEYS.FORM_ID) || ''

@@ -2,10 +2,31 @@ function runMvpSelfTests() {
   testDeadlineBoundary_();
   testMatchingNoSelfOrDuplicate_();
   testRecentPairAvoidance_();
+  testRecentPairGlobalAvoidance_();
   testOddSkipFairness_();
+  testIncompleteMatchesRejected_();
   testZeroAndOneSubmission_();
   testHtmlEscaping_();
+  testDateValidation_();
   return 'MVP self-tests passed.';
+}
+
+function testIncompleteMatchesRejected_() {
+  var diaries = sampleDiaries_(['a', 'b', 'c', 'd']);
+  var matches = [{ match_type: 'pair', left_diary_id: 'diary-a', right_diary_id: 'diary-b' }];
+  var rejected = false;
+  try { validateMatchesForDiaries_(matches, diaries); } catch (error) { rejected = true; }
+  assert_(rejected, 'Incomplete existing matches must stop the run.');
+}
+
+function testRecentPairGlobalAvoidance_() {
+  var diaries = sampleDiaries_(['a', 'b', 'c', 'd']);
+  var recent = {};
+  [pairKey_('a', 'b'), pairKey_('a', 'd'), pairKey_('b', 'c'), pairKey_('c', 'd')].forEach(function(key) { recent[key] = true; });
+  var result = createMatches_(diaries, recent, {}, '', function() { return 0; });
+  assert_(result.pairs.every(function(pair) {
+    return !recent[pairKey_(pair[0].participant_id, pair[1].participant_id)];
+  }), 'Recent pairs must be avoided when a complete alternative exists.');
 }
 
 function testDeadlineBoundary_() {
@@ -47,6 +68,12 @@ function testZeroAndOneSubmission_() {
 
 function testHtmlEscaping_() {
   assert_(escapeHtml_('<script>') === '&lt;script&gt;', 'Mail HTML must escape diary text.');
+}
+
+function testDateValidation_() {
+  assert_(isValidDateKey_('2026-02-28'), 'A real date must be accepted.');
+  assert_(!isValidDateKey_('2026-02-29'), 'An impossible date must be rejected.');
+  assert_(!isValidDateKey_('2026-13-01'), 'An impossible month must be rejected.');
 }
 
 function sampleDiaries_(participantIds) {

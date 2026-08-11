@@ -24,18 +24,43 @@ function getSkipHistory_() {
 }
 
 function appendMatch_(diaryDate, leftDiary, rightDiary) {
-  appendRecord_('Matches', {
+  appendRecord_('Matches', createPairMatchRecord_(diaryDate, leftDiary, rightDiary));
+}
+
+function createPairMatchRecord_(diaryDate, leftDiary, rightDiary) {
+  return {
     match_id: createId_(), diary_date: diaryDate, match_type: 'pair', left_diary_id: leftDiary.diary_id,
     right_diary_id: rightDiary.diary_id, left_participant_id: leftDiary.participant_id,
     right_participant_id: rightDiary.participant_id, status: 'pending_delivery', created_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss')
-  });
+  };
 }
 
 function appendSkippedMatch_(diaryDate, diary) {
-  appendRecord_('Matches', {
+  appendRecord_('Matches', createSkippedMatchRecord_(diaryDate, diary));
+}
+
+function createSkippedMatchRecord_(diaryDate, diary) {
+  return {
     match_id: createId_(), diary_date: diaryDate, match_type: 'skipped', left_diary_id: diary.diary_id,
     right_diary_id: '', left_participant_id: diary.participant_id, right_participant_id: '', status: 'skipped',
     created_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss')
+  };
+}
+
+function validateMatchesForDiaries_(matches, diaries) {
+  var expected = {};
+  diaries.forEach(function(diary) { expected[String(diary.diary_id)] = 0; });
+  matches.forEach(function(match) {
+    var diaryIds = String(match.match_type) === 'pair'
+      ? [String(match.left_diary_id), String(match.right_diary_id)]
+      : [String(match.left_diary_id)];
+    diaryIds.forEach(function(diaryId) {
+      if (!Object.prototype.hasOwnProperty.call(expected, diaryId)) throw new Error('Matches contain an unknown diary.');
+      expected[diaryId] += 1;
+    });
+  });
+  Object.keys(expected).forEach(function(diaryId) {
+    if (expected[diaryId] !== 1) throw new Error('Matches are incomplete or duplicated for the requested date.');
   });
 }
 

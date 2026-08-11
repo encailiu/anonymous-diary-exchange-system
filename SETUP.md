@@ -165,6 +165,8 @@ uv run --group dev python tests/test_gas_source.py
 | 参加者にFormが開けない | Formの公開・共有設定で、そのGoogleアカウントに回答権限があるか確認する。 |
 | メールが届かない | `DeliveryLog` の `status` と `error`、`RunLog`、管理者宛てエラー通知を確認する。 |
 | 同じ日付を再実行したい | `DeliveryLog` に既存行がある配信は二重送信を防ぐため自動再送しない。まず送信状況を管理者が確認する。 |
+| `DeliveryLog` が `error` | 原因を解消してから「匿名日記システム」→「失敗した配信を再送」で日付を指定する。`error` の行だけが再送される。 |
+| `DeliveryLog` が `processing` のまま | Gmailの送信成功後に記録更新だけ失敗した可能性があるため、自動再送しない。送信済みメールとGAS実行ログを管理者が確認する。 |
 
 ## このセットアップ手順に含まれないもの
 

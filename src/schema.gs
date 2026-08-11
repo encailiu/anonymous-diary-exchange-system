@@ -12,7 +12,16 @@ function initializeSpreadsheet() {
     var sheet = spreadsheet.getSheetByName(name);
     if (!sheet) sheet = spreadsheet.insertSheet(name);
     if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_DEFINITIONS[name]);
+    else validateSheetHeaders_(sheet, name);
   });
+}
+
+function validateSheetHeaders_(sheet, name) {
+  var expected = SHEET_DEFINITIONS[name];
+  var actual = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), expected.length)).getValues()[0];
+  var matches = expected.length === actual.length;
+  expected.forEach(function(header, index) { if (actual[index] !== header) matches = false; });
+  if (!matches) throw new Error('Unexpected headers in sheet: ' + name + '.');
 }
 
 function getSheet_(name) {
@@ -37,6 +46,17 @@ function appendRecord_(sheetName, record) {
   var headers = SHEET_DEFINITIONS[sheetName];
   if (!headers) throw new Error('Unknown sheet: ' + sheetName);
   getSheet_(sheetName).appendRow(headers.map(function(header) { return record[header] || ''; }));
+}
+
+function appendRecords_(sheetName, records) {
+  if (records.length === 0) return;
+  var headers = SHEET_DEFINITIONS[sheetName];
+  if (!headers) throw new Error('Unknown sheet: ' + sheetName);
+  var sheet = getSheet_(sheetName);
+  var values = records.map(function(record) {
+    return headers.map(function(header) { return record[header] || ''; });
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
 }
 
 function updateRecord_(sheetName, rowNumber, record) {
