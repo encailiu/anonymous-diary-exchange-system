@@ -59,6 +59,8 @@ GAS の実装は次の責務ごとに分割します。
 
 開発時の必須ルールと確認項目は [AGENTS.md](AGENTS.md) を参照してください。
 
+実装の進捗と次回の開始点は [実装チェックリスト](docs/implementation-checklist.md) で管理します。
+
 ## 開発用Python環境
 
 アプリケーション本体はGASですが、スキルや補助スクリプトの検証にPythonを使います。依存は `uv` で管理します。
@@ -66,6 +68,7 @@ GAS の実装は次の責務ごとに分割します。
 ```bash
 UV_CACHE_DIR=/tmp/anonymous-diary-uv-cache uv sync --group dev
 UV_CACHE_DIR=/tmp/anonymous-diary-uv-cache uv run --group dev python /home/encailiu/.codex/skills/.system/skill-creator/scripts/quick_validate.py /home/encailiu/.codex/skills/anonymous-diary-guardrails
+UV_CACHE_DIR=/tmp/anonymous-diary-uv-cache uv run --group dev python tests/test_gas_source.py
 ```
 
 通常の書き込み可能な開発環境では `UV_CACHE_DIR` の指定は不要です。`.venv/` はローカル環境のためリポジトリには含めません。

@@ -8,4 +8,5 @@ dependencies = []
 [dependency-groups]
 dev = [
   "pyyaml>=6.0.3",
+  "quickjs>=1.19.4",
 ]

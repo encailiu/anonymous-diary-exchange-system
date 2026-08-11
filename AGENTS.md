@@ -45,6 +45,12 @@ Google Forms、Google Sheets、Google Apps Script（GAS）、Google Drive、Gmai
 - 例外時に複数管理者すべてへ通知されること
 - アーカイブ対象だけがCSV化・削除され、対象外データが保持されること
 
+## Git運用
+
+- コミットメッセージは、修正範囲を示す英小文字のprefixと日本語タイトルを `prefix: タイトル` 形式で記述する。使用するprefixは `feat`、`fix`、`docs`、`test`、`refactor`、`chore` とする。
+- タイトルの後は空行を入れ、日本語の簡単な説明を本文に記述する。
+- 実装・検証が完了した変更だけをコミットし、検証用の秘密情報や `.clasp.json`、`.venv/` を含めない。
+
 ## 参照資料
 
 - 要件: `docs/2-require-spec-v1.0.md`
