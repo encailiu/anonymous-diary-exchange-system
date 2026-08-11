@@ -1,0 +1,11 @@
+[project]
+name = "anonymous-diary-exchange-system"
+version = "0.1.0"
+description = "Development tooling for the anonymous diary exchange system"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pyyaml>=6.0.3",
+]
