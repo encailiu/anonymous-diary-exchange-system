@@ -30,7 +30,7 @@
 
 ## 3. エラー処理と複数管理者通知の実装仕様
 - `notifyAdminsOfError(errorContext, errorDetails)` 関数を実装。
-- `Config` または `ScriptProperties` から `ADMIN_EMAILS` (カンマ区切りまたは配列) を取得。
+- `ScriptProperties` から `ADMIN_EMAILS` をカンマ区切り文字列として取得。
 - 全ての管理者アドレスに対して以下のフォーマットでメールを即時発信：
   ```text
   件名: 【緊急アラート】匿名日記システムでエラーが発生しました
