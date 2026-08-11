@@ -10,11 +10,13 @@ function onDiaryFormSubmit(event) {
       var photoFileIds = getPhotoFileIds_(response, config.photoItemTitle);
       if (!email) throw new Error('The form must collect respondent email addresses.');
       if (!body) throw new Error('Diary body is empty.');
-      if (photoFileIds.length > 3) throw new Error('A diary may contain at most three photos.');
       var diaryDate = getDiaryDateForSubmission_(submittedAt);
       var participant = getActiveParticipantsByEmail_()[email];
       var status = participant ? 'accepted' : 'rejected';
-      if (participant) validatePhotoFileIds_(photoFileIds);
+      if (participant) {
+        if (photoFileIds.length > 3) throw new Error('A diary may contain at most three photos.');
+        validatePhotoFileIds_(photoFileIds);
+      }
       if (participant && hasAcceptedDiary_(participant.participantId, diaryDate)) status = 'rejected_duplicate';
       appendRecord_('Diaries', {
         diary_id: createId_(), diary_date: diaryDate, submitted_at: formatJst_(submittedAt, 'yyyy-MM-dd HH:mm:ss'),

@@ -105,12 +105,22 @@ function deliverDiaryOnce_(diaryDate, diary, recipient, recipientParticipantId) 
   }
   try {
     sendDiaryExchangeMail_(recipient.email, diary);
+  } catch (error) {
+    try { updateRecord_('DeliveryLog', delivery._rowNumber, { status: 'error', error: error.message || String(error) }); }
+    catch (stateError) {
+      notifyAdminsOfError('deliveryFailureStatusUpdate', stateError);
+      notifyAdminsOfError('deliverDiaryOnce', error);
+      return 'processing';
+    }
+    notifyAdminsOfError('deliverDiaryOnce', error);
+    return 'error';
+  }
+  try {
     updateRecord_('DeliveryLog', delivery._rowNumber, { status: 'delivered', delivered_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss'), error: '' });
     return 'delivered';
   } catch (error) {
-    updateRecord_('DeliveryLog', delivery._rowNumber, { status: 'error', error: error.message || String(error) });
-    notifyAdminsOfError('deliverDiaryOnce', error);
-    return 'error';
+    notifyAdminsOfError('deliverySuccessStatusUpdate', error);
+    return 'processing';
   }
 }
 
@@ -148,19 +158,31 @@ function retryFailedDeliveriesForDate_(diaryDate) {
     });
     try {
       sendDiaryExchangeMail_(recipient.email, diary);
+    } catch (error) {
+      try { updateRecord_('DeliveryLog', delivery._rowNumber, { status: 'error', error: error.message || String(error) }); }
+      catch (stateError) {
+        notifyAdminsOfError('deliveryRetryFailureStatusUpdate', stateError);
+        notifyAdminsOfError('retryFailedDeliveries', error);
+        result.processing += 1;
+        return;
+      }
+      notifyAdminsOfError('retryFailedDeliveries', error);
+      result.failed += 1;
+      return;
+    }
+    try {
       updateRecord_('DeliveryLog', delivery._rowNumber, {
         status: 'delivered', delivered_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss'), error: ''
       });
       result.delivered += 1;
     } catch (error) {
-      updateRecord_('DeliveryLog', delivery._rowNumber, { status: 'error', error: error.message || String(error) });
-      notifyAdminsOfError('retryFailedDeliveries', error);
-      result.failed += 1;
+      notifyAdminsOfError('deliveryRetrySuccessStatusUpdate', error);
+      result.processing += 1;
     }
   });
   updateMatchDeliveryStatuses_(diaryDate, getExistingMatchesForDate_(diaryDate));
-  appendRunLog_(diaryDate, result.failed > 0 ? 'error' : 'retry_completed',
-    result.delivered + ' failed delivery attempt(s) retried; ' + result.failed + ' failed.');
+  appendRunLog_(diaryDate, result.failed > 0 || result.processing > 0 ? 'error' : 'retry_completed',
+    result.delivered + ' retried; ' + result.failed + ' failed; ' + result.processing + ' remain processing.');
   return result;
 }
 
@@ -283,6 +305,7 @@ function onOpen() {
     .addItem('未配信のマッチを再構築', 'repairMatchesFromPrompt')
     .addItem('processingを確認済みにする', 'resolveProcessingFromPrompt')
     .addItem('失敗したコメント通知を再送', 'retryFailedCommentNotificationsFromPrompt')
+    .addItem('コメント通知のprocessingを確認', 'resolveProcessingCommentFromPrompt')
     .addItem('旧データをアーカイブして削除', 'archiveOldDataFromPrompt')
     .addItem('自己テストを実行', 'runMvpSelfTests')
     .addToUi();

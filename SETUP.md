@@ -191,6 +191,8 @@ uv run --group dev python tests/test_gas_source.py
 
 `processing` を確認した後は「processingを確認済みにする」を選び、対象の `delivery_id` を入力します。Gmailで送信済みなら `delivered`、未送信であることを確認できた場合だけ `error` と入力してください。`error` にした行は、その後「失敗した配信を再送」の対象になります。
 
+コメント通知の `processing` も同様にGmailを確認し、「コメント通知のprocessingを確認」から `comment_id` と確認結果を入力します。
+
 参加者を `active=false` にすると、その後のマッチング、未実行の配信、再送から除外されます。無効化済み参加者へ過去分を送信することはありません。
 
 ### 旧データをアーカイブして削除する

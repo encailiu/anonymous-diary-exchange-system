@@ -130,6 +130,23 @@ def test_delivered_mail_is_not_reopened_when_participant_is_inactive() -> None:
     assert outcome == "skipped"
 
 
+def test_successful_send_with_failed_status_update_stays_processing() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      getExistingDeliveryStatus_ = function() { return ''; };
+      ensureDiaryCommentToken_ = function() {};
+      reserveDelivery_ = function() { return { _rowNumber: 2 }; };
+      sendDiaryExchangeMail_ = function() {};
+      updateRecord_ = function(name, row, record) {
+        if (name === 'DeliveryLog' && record.status === 'delivered') throw new Error('sheet update failed');
+      };
+      notifyAdminsOfError = function() {};
+    ''')
+    outcome = context.eval("deliverDiaryOnce_('2026-01-01', { diary_id: 'd1' }, { participantId: 'p1', email: 'one@example.test' }, 'p1')")
+    assert outcome == "processing"
+
+
 def test_inactive_participants_are_excluded_from_matching() -> None:
     context = quickjs.Context()
     load_gas_sources(context)
@@ -159,6 +176,35 @@ def test_processing_resolution_requires_explicit_state() -> None:
     ''')
     assert context.eval("resolveProcessingDelivery('delivery-1', 'error')") == "error"
     assert json.loads(context.eval("JSON.stringify(updates)")) == ["error"]
+
+
+def test_processing_comment_resolution_requires_explicit_state() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var updates = [];
+      withScriptLock_ = function(callback) { return callback(); };
+      getRows_ = function(name) { return name === 'Comments' ? [{
+        _rowNumber: 2, comment_id: 'comment-1', status: 'processing'
+      }] : []; };
+      updateRecord_ = function(name, row, record) { updates.push(record.status); };
+      notifyAdminsOfError = function() {};
+    ''')
+    assert context.eval("resolveProcessingComment('comment-1', 'delivered')") == "delivered"
+    assert json.loads(context.eval("JSON.stringify(updates)")) == ["delivered"]
+
+
+def test_matching_handles_fifty_participants_without_duplicates() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    result = json.loads(context.eval(r'''
+      JSON.stringify(createMatches_(sampleDiaries_(Array.from({length: 50}, function(_, index) {
+        return 'participant-' + index;
+      })), {}, {}, '', function() { return 0.25; }))
+    '''))
+    members = [diary["participant_id"] for pair in result["pairs"] for diary in pair]
+    assert len(result["pairs"]) == 25
+    assert len(members) == len(set(members)) == 50
 
 
 def test_logs_do_not_include_admin_recipient() -> None:
@@ -224,6 +270,28 @@ def test_photo_metadata_is_internal_and_attachments_are_anonymous() -> None:
     assert "anonymous-photo-" in mail_source
 
 
+def test_participant_mail_does_not_render_internal_identifiers() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    token = "b" * 64
+    context.eval(r'''
+      var capturedMail = null;
+      getConfig_ = function() { return { webAppUrl: 'https://script.google.com/macros/s/deployment/exec' }; };
+      createAnonymousPhotoAttachments_ = function() { return []; };
+      sendSystemMail = function(to, subject, body, htmlBody) {
+        capturedMail = { subject: subject, body: body, htmlBody: htmlBody.htmlBody };
+      };
+    ''')
+    context.eval(f'''sendDiaryExchangeMail_('reader@example.test', {{
+      diary_id: 'internal-diary-id', participant_id: 'internal-participant-id', email: 'author@example.test',
+      body: 'safe diary body', comment_token: '{token}', photo_file_ids: '[]'
+    }})''')
+    rendered = context.eval("JSON.stringify(capturedMail)")
+    assert "internal-diary-id" not in rendered
+    assert "internal-participant-id" not in rendered
+    assert "author@example.test" not in rendered
+
+
 def test_no_checked_in_clasp_credentials() -> None:
     assert not (ROOT / ".clasp.json").exists(), ".clasp.json must not be committed"
 
@@ -235,13 +303,17 @@ if __name__ == "__main__":
     test_retry_sends_only_error_deliveries()
     test_daily_run_records_delivery_failure_as_error()
     test_delivered_mail_is_not_reopened_when_participant_is_inactive()
+    test_successful_send_with_failed_status_update_stays_processing()
     test_inactive_participants_are_excluded_from_matching()
     test_processing_resolution_requires_explicit_state()
+    test_processing_comment_resolution_requires_explicit_state()
+    test_matching_handles_fifty_participants_without_duplicates()
     test_logs_do_not_include_admin_recipient()
     test_error_notification_attempts_every_admin()
     test_comment_url_exposes_only_random_token()
     test_comment_source_does_not_read_google_identity()
     test_archive_cutoff_and_csv_safety()
     test_photo_metadata_is_internal_and_attachments_are_anonymous()
+    test_participant_mail_does_not_render_internal_identifiers()
     test_no_checked_in_clasp_credentials()
     print("Local GAS source tests passed.")

@@ -3,7 +3,7 @@ function sendSystemMail(to, subject, body, htmlBody) {
   if (provider !== 'gmail') throw new Error('Unsupported MAIL_PROVIDER: ' + provider);
   var content = htmlBody && typeof htmlBody === 'object' ? htmlBody : { htmlBody: htmlBody };
   var options = { htmlBody: content.htmlBody || escapeHtml_(body).replace(/\n/g, '<br>') };
-  if (content.attachments) options.attachments = content.attachments;
+  if (content.attachments && content.attachments.length > 0) options.attachments = content.attachments;
   GmailApp.sendEmail(to, subject, body, options);
 }
 

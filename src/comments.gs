@@ -80,7 +80,7 @@ function retryFailedCommentNotificationsForDate(diaryDate) {
   if (!isValidDateKey_(String(diaryDate))) throw new Error('Date must be a valid YYYY-MM-DD date.');
   try {
     return withScriptLock_(function() {
-      var result = { delivered: 0, failed: 0 };
+      var result = { delivered: 0, failed: 0, processing: 0 };
       getRows_('Comments').filter(function(row) {
         return String(row.diary_date) === String(diaryDate) && String(row.status) === 'error';
       }).forEach(function(comment) {
@@ -103,6 +103,7 @@ function retryFailedCommentNotificationsForDate(diaryDate) {
           result.delivered += 1;
         } catch (error) {
           notifyAdminsOfError('commentRetryStatusUpdate', error);
+          result.processing += 1;
         }
       });
       return result;
@@ -118,5 +119,35 @@ function retryFailedCommentNotificationsFromPrompt() {
   var response = ui.prompt('失敗したコメント通知を再送', '日記の日付を YYYY-MM-DD 形式で入力してください。', ui.ButtonSet.OK_CANCEL);
   if (response.getSelectedButton() !== ui.Button.OK) return;
   var result = retryFailedCommentNotificationsForDate(response.getResponseText().trim());
-  ui.alert(result.delivered + '件を再送し、' + result.failed + '件が失敗しました。');
+  ui.alert(result.delivered + '件を再送し、' + result.failed + '件が失敗、' + result.processing + '件がprocessingのままです。');
+}
+
+function resolveProcessingComment(commentId, resolution) {
+  if (resolution !== 'delivered' && resolution !== 'error') throw new Error('Resolution must be delivered or error.');
+  try {
+    return withScriptLock_(function() {
+      var comment = getRows_('Comments').find(function(row) { return String(row.comment_id) === String(commentId); });
+      if (!comment || String(comment.status) !== 'processing') throw new Error('A processing comment with that ID was not found.');
+      updateRecord_('Comments', comment._rowNumber, {
+        status: resolution,
+        notified_at: resolution === 'delivered' ? formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss') : '',
+        error: resolution === 'error' ? 'Administrator confirmed that the notification was not sent.' : ''
+      });
+      return resolution;
+    });
+  } catch (error) {
+    notifyAdminsOfError('resolveProcessingComment', error);
+    throw error;
+  }
+}
+
+function resolveProcessingCommentFromPrompt() {
+  var ui = SpreadsheetApp.getUi();
+  var idResponse = ui.prompt('コメント通知のprocessingを確認', 'Commentsの comment_id を入力してください。', ui.ButtonSet.OK_CANCEL);
+  if (idResponse.getSelectedButton() !== ui.Button.OK) return;
+  var resolutionResponse = ui.prompt('確認結果', 'Gmailで通知済みなら delivered、未送信を確認できた場合だけ error と入力してください。', ui.ButtonSet.OK_CANCEL);
+  if (resolutionResponse.getSelectedButton() !== ui.Button.OK) return;
+  var resolution = resolutionResponse.getResponseText().trim().toLowerCase();
+  resolveProcessingComment(idResponse.getResponseText().trim(), resolution);
+  ui.alert('コメント通知のprocessingを ' + resolution + ' に更新しました。');
 }
