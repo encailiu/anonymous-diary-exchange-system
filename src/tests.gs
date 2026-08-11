@@ -5,11 +5,23 @@ function runMvpSelfTests() {
   testRecentPairGlobalAvoidance_();
   testOddSkipFairness_();
   testIncompleteMatchesRejected_();
+  testMismatchedParticipantRejected_();
   testZeroAndOneSubmission_();
   testHtmlEscaping_();
   testDateValidation_();
   testCommentToken_();
   return 'MVP self-tests passed.';
+}
+
+function testMismatchedParticipantRejected_() {
+  var diaries = sampleDiaries_(['a', 'b']);
+  var matches = [{
+    match_id: 'match-1', match_type: 'pair', left_diary_id: 'diary-a', right_diary_id: 'diary-b',
+    left_participant_id: 'b', right_participant_id: 'a'
+  }];
+  var rejected = false;
+  try { validateMatchesForDiaries_(matches, diaries); } catch (error) { rejected = true; }
+  assert_(rejected, 'A participant must own the diary referenced by the match.');
 }
 
 function runMvpSelfTestsFromMenu() {
@@ -24,7 +36,7 @@ function testCommentToken_() {
 
 function testIncompleteMatchesRejected_() {
   var diaries = sampleDiaries_(['a', 'b', 'c', 'd']);
-  var matches = [{ match_type: 'pair', left_diary_id: 'diary-a', right_diary_id: 'diary-b' }];
+  var matches = [{ match_id: 'match-1', match_type: 'pair', left_diary_id: 'diary-a', right_diary_id: 'diary-b', left_participant_id: 'a', right_participant_id: 'b' }];
   var rejected = false;
   try { validateMatchesForDiaries_(matches, diaries); } catch (error) { rejected = true; }
   assert_(rejected, 'Incomplete existing matches must stop the run.');

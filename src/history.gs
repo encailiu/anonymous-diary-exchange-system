@@ -49,16 +49,41 @@ function createSkippedMatchRecord_(diaryDate, diary) {
 
 function validateMatchesForDiaries_(matches, diaries) {
   var expected = {};
-  diaries.forEach(function(diary) { expected[String(diary.diary_id)] = 0; });
+  var participantsByDiaryId = {};
+  var matchIds = {};
+  var skippedCount = 0;
+  diaries.forEach(function(diary) {
+    var diaryId = String(diary.diary_id);
+    expected[diaryId] = 0;
+    participantsByDiaryId[diaryId] = String(diary.participant_id);
+  });
   matches.forEach(function(match) {
-    var diaryIds = String(match.match_type) === 'pair'
-      ? [String(match.left_diary_id), String(match.right_diary_id)]
-      : [String(match.left_diary_id)];
+    var matchId = String(match.match_id || '');
+    if (!matchId || matchIds[matchId]) throw new Error('Matches contain a missing or duplicate match ID.');
+    matchIds[matchId] = true;
+    var matchType = String(match.match_type);
+    if (matchType !== 'pair' && matchType !== 'skipped') throw new Error('Matches contain an unknown match type.');
+    var leftDiaryId = String(match.left_diary_id);
+    var leftParticipantId = String(match.left_participant_id);
+    var diaryIds = [leftDiaryId];
+    if (matchType === 'pair') {
+      var rightDiaryId = String(match.right_diary_id);
+      var rightParticipantId = String(match.right_participant_id);
+      if (!rightDiaryId || !rightParticipantId) throw new Error('A pair match is incomplete.');
+      if (leftDiaryId === rightDiaryId || leftParticipantId === rightParticipantId) throw new Error('A self match is forbidden.');
+      if (participantsByDiaryId[rightDiaryId] !== rightParticipantId) throw new Error('A match participant does not own the referenced diary.');
+      diaryIds.push(rightDiaryId);
+    } else {
+      skippedCount += 1;
+      if (String(match.right_diary_id || '') || String(match.right_participant_id || '')) throw new Error('A skipped match must not contain a right side.');
+    }
+    if (participantsByDiaryId[leftDiaryId] !== leftParticipantId) throw new Error('A match participant does not own the referenced diary.');
     diaryIds.forEach(function(diaryId) {
       if (!Object.prototype.hasOwnProperty.call(expected, diaryId)) throw new Error('Matches contain an unknown diary.');
       expected[diaryId] += 1;
     });
   });
+  if (skippedCount !== diaries.length % 2) throw new Error('Matches contain an invalid number of skipped diaries.');
   Object.keys(expected).forEach(function(diaryId) {
     if (expected[diaryId] !== 1) throw new Error('Matches are incomplete or duplicated for the requested date.');
   });

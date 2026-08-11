@@ -65,6 +65,7 @@ function ensureMatchesForDate_(diaryDate) {
 }
 
 function deliverPendingMatches_(diaryDate, matches) {
+  validateDeliveryLogForDate_(diaryDate);
   var diariesById = {};
   getEligibleDiariesForDate_(diaryDate).forEach(function(diary) { diariesById[String(diary.diary_id)] = diary; });
   var participantsById = getParticipantsById_();
@@ -125,11 +126,24 @@ function deliverDiaryOnce_(diaryDate, diary, recipient, recipientParticipantId) 
 }
 
 function getExistingDeliveryStatus_(diaryDate, diaryId, recipientParticipantId) {
-  var existing = getRows_('DeliveryLog').find(function(row) {
+  var existing = getRows_('DeliveryLog').filter(function(row) {
     return String(row.diary_date) === diaryDate && String(row.diary_id) === String(diaryId) &&
       String(row.recipient_participant_id) === String(recipientParticipantId);
   });
-  return existing ? String(existing.status) : '';
+  if (existing.length > 1) throw new Error('DeliveryLog contains duplicate delivery records.');
+  return existing.length ? String(existing[0].status) : '';
+}
+
+function validateDeliveryLogForDate_(diaryDate) {
+  var keys = {};
+  var ids = {};
+  getRows_('DeliveryLog').filter(function(row) { return String(row.diary_date) === diaryDate; }).forEach(function(row) {
+    var id = String(row.delivery_id || '');
+    var key = String(row.diary_id) + ':' + String(row.recipient_participant_id);
+    if (!id || ids[id] || keys[key]) throw new Error('DeliveryLog contains a missing or duplicate delivery record.');
+    ids[id] = true;
+    keys[key] = true;
+  });
 }
 
 function retryFailedDeliveriesForDate(diaryDate) {
@@ -195,10 +209,11 @@ function retryFailedDeliveriesFromPrompt() {
 }
 
 function reserveDelivery_(diaryDate, diaryId, recipient) {
-  var existing = getRows_('DeliveryLog').find(function(row) {
+  var existing = getRows_('DeliveryLog').filter(function(row) {
     return String(row.diary_date) === diaryDate && String(row.diary_id) === String(diaryId) && String(row.recipient_participant_id) === String(recipient.participantId);
   });
-  if (existing) return { _existingStatus: String(existing.status) };
+  if (existing.length > 1) throw new Error('DeliveryLog contains duplicate delivery records.');
+  if (existing.length) return { _existingStatus: String(existing[0].status) };
   var record = {
     delivery_id: createId_(), diary_date: diaryDate, diary_id: diaryId, recipient_participant_id: recipient.participantId,
     recipient_email: recipient.email, status: 'processing', attempted_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss'), delivered_at: '', error: ''
