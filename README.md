@@ -57,13 +57,9 @@ GAS の実装は次の責務ごとに分割します。
 
 ## ドキュメント
 
+- [各種仕様書](docs/README.md)
 - [運用者向けセットアップマニュアル](SETUP.md)
 - [非エンジニア向け動作確認手順書・チェックリスト](VERIFICATION.md)
-- [基本仕様](docs/1-basic-spec-v1.0.md)
-- [要求仕様](docs/2-require-spec-v1.0.md)
-- [基本設計](docs/3-basic-design-v1.0.md)
-- [実装仕様](docs/4-impl-spec-v1.0.md)
-- [エージェント開発指示](docs/5-agent-dev-inst.md)
 
 開発時の必須ルールと確認項目は [AGENTS.md](AGENTS.md) を参照してください。
 
