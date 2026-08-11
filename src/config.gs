@@ -6,7 +6,8 @@ var CONFIG_KEYS = {
   DIARY_BODY_ITEM_TITLE: 'DIARY_BODY_ITEM_TITLE',
   FORM_ID: 'FORM_ID',
   WEB_APP_URL: 'WEB_APP_URL',
-  ARCHIVE_FOLDER_ID: 'ARCHIVE_FOLDER_ID'
+  ARCHIVE_FOLDER_ID: 'ARCHIVE_FOLDER_ID',
+  PHOTO_ITEM_TITLE: 'PHOTO_ITEM_TITLE'
 };
 
 function getConfig_() {
@@ -25,7 +26,8 @@ function getConfig_() {
     diaryBodyItemTitle: properties.getProperty(CONFIG_KEYS.DIARY_BODY_ITEM_TITLE) || '日記本文',
     formId: properties.getProperty(CONFIG_KEYS.FORM_ID) || '',
     webAppUrl: properties.getProperty(CONFIG_KEYS.WEB_APP_URL) || '',
-    archiveFolderId: properties.getProperty(CONFIG_KEYS.ARCHIVE_FOLDER_ID) || ''
+    archiveFolderId: properties.getProperty(CONFIG_KEYS.ARCHIVE_FOLDER_ID) || '',
+    photoItemTitle: properties.getProperty(CONFIG_KEYS.PHOTO_ITEM_TITLE) || '写真'
   };
 }
 

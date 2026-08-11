@@ -213,6 +213,17 @@ def test_archive_cutoff_and_csv_safety() -> None:
     assert '"a,""b""\nline"' in csv
 
 
+def test_photo_metadata_is_internal_and_attachments_are_anonymous() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    parsed = json.loads(context.eval("JSON.stringify(parsePhotoFileIds_('[\"file-1\",\"file-2\"]'))"))
+    assert parsed == ["file-1", "file-2"]
+    mail_source = (SOURCE_DIR / "mail.gs").read_text(encoding="utf-8")
+    assert ".getUrl(" not in mail_source
+    assert ".getName(" not in mail_source
+    assert "anonymous-photo-" in mail_source
+
+
 def test_no_checked_in_clasp_credentials() -> None:
     assert not (ROOT / ".clasp.json").exists(), ".clasp.json must not be committed"
 
@@ -231,5 +242,6 @@ if __name__ == "__main__":
     test_comment_url_exposes_only_random_token()
     test_comment_source_does_not_read_google_identity()
     test_archive_cutoff_and_csv_safety()
+    test_photo_metadata_is_internal_and_attachments_are_anonymous()
     test_no_checked_in_clasp_credentials()
     print("Local GAS source tests passed.")

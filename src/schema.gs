@@ -1,6 +1,6 @@
 var SHEET_DEFINITIONS = {
   Participants: ['participant_id', 'email', 'active', 'created_at'],
-  Diaries: ['diary_id', 'diary_date', 'submitted_at', 'participant_id', 'email', 'body', 'status', 'comment_token'],
+  Diaries: ['diary_id', 'diary_date', 'submitted_at', 'participant_id', 'email', 'body', 'status', 'comment_token', 'photo_file_ids'],
   Matches: ['match_id', 'diary_date', 'match_type', 'left_diary_id', 'right_diary_id', 'left_participant_id', 'right_participant_id', 'status', 'created_at'],
   DeliveryLog: ['delivery_id', 'diary_date', 'diary_id', 'recipient_participant_id', 'recipient_email', 'status', 'attempted_at', 'delivered_at', 'error'],
   RunLog: ['run_id', 'diary_date', 'status', 'details', 'created_at'],

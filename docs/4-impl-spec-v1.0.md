@@ -41,7 +41,7 @@
   ```
 
 ## 4. メール配信モジュール仕様
-- `sendSystemMail(to, subject, body, htmlBody)` 関数で全メール送信を一元管理。
+- `sendSystemMail(to, subject, body, htmlBody)` 関数で全メール送信を一元管理。添付時の第4引数は、HTML本文と匿名化済み添付を持つ内部オブジェクトも受け付ける。
 - 内部では `GmailApp.sendEmail()` を呼び出し、Googleの標準機能だけで送信する。
 
 ## 5. 配信状態と再送仕様
@@ -63,3 +63,11 @@
 - コメント本文はHTMLエスケープし、通知は `sendSystemMail` を経由する。
 - 通知失敗は `error` として保存して全管理者へ通知し、管理者の明示操作で再送する。
 - 送信結果不明の `processing` は二重通知防止のため自動再送しない。
+
+## 7. 写真仕様
+
+- Formの任意ファイルアップロード質問から最大3件のDriveファイルIDを内部保存する。
+- JPEG、PNG、GIFだけを許可し、1件10MB、合計20MBを上限とする。
+- 配信時に一時的なGoogle Slidesへ画像を挿入し、各スライドをPNGとして再出力する。
+- 添付名は `anonymous-photo-N.png` とし、元ファイル名、Drive URL、埋め込みメタデータを参加者へ渡さない。
+- 一時Presentationは成功・失敗にかかわらず `finally` でゴミ箱へ移動する。
