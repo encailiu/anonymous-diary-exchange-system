@@ -1,36 +1,46 @@
 function doGet(event) {
   try {
     var token = String(event && event.parameter && event.parameter.token || '');
-    if (!findDiaryByCommentToken_(token)) return createCommentPage_('このコメントリンクは無効です。', false, '');
-    return createCommentPage_('匿名コメントを送る', true, token);
+    if (!findCommentableDiaryByToken_(token)) return createCommentPage_('このコメントリンクは無効です。', false, '', '');
+    return createCommentPage_('匿名コメントを送る', true, token, createUniqueCommentSubmissionToken_());
   } catch (error) {
     notifyAdminsOfError('commentPage', error);
-    return createCommentPage_('現在コメントを受け付けられません。', false, '');
+    return createCommentPage_('現在コメントを受け付けられません。', false, '', '');
   }
 }
 
 function doPost(event) {
   try {
     var token = String(event && event.parameter && event.parameter.token || '');
+    var submissionToken = String(event && event.parameter && event.parameter.submission_token || '');
     var body = String(event && event.parameter && event.parameter.body || '').trim();
-    if (!body) return createCommentPage_('コメントを入力してください。', true, token);
-    if (body.length > 5000) return createCommentPage_('コメントは5000文字以内で入力してください。', true, token);
-    submitAnonymousComment_(token, body);
-    return createCommentPage_('匿名コメントを受け付けました。', false, '');
+    if (!findCommentableDiaryByToken_(token) || !isValidCommentSubmissionToken_(submissionToken)) {
+      throw new Error('Invalid comment submission.');
+    }
+    if (!body) return createCommentPage_('コメントを入力してください。', true, token, submissionToken);
+    if (body.length > 5000) return createCommentPage_('コメントは5000文字以内で入力してください。', true, token, submissionToken);
+    submitAnonymousComment_(token, submissionToken, body);
+    return createCommentPage_('匿名コメントを受け付けました。', false, '', '');
   } catch (error) {
     notifyAdminsOfError('submitAnonymousComment', error);
-    return createCommentPage_('コメントを受け付けられませんでした。管理者へ通知しました。', false, '');
+    return createCommentPage_('コメントを受け付けられませんでした。管理者へ通知しました。', false, '', '');
   }
 }
 
-function submitAnonymousComment_(token, body) {
+function submitAnonymousComment_(token, submissionToken, body) {
   return withScriptLock_(function() {
-    var diary = findDiaryByCommentToken_(token);
+    if (!isValidCommentSubmissionToken_(submissionToken)) throw new Error('Invalid comment submission token.');
+    var existing = getRows_('Comments').find(function(row) {
+      return String(row.submission_token) === submissionToken;
+    });
+    if (existing) return String(existing.comment_id);
+    var diary = findCommentableDiaryByToken_(token);
     if (!diary) throw new Error('Invalid comment token.');
     var author = getParticipantsById_()[String(diary.participant_id)];
     if (!author) throw new Error('Comment target author is no longer active.');
     var record = {
-      comment_id: createId_(), comment_token: token, diary_date: String(diary.diary_date), body: body,
+      comment_id: createId_(), comment_token: token, submission_token: submissionToken,
+      diary_date: String(diary.diary_date), body: body,
       status: 'processing', submitted_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss'), notified_at: '', error: ''
     };
     appendRecord_('Comments', record);
@@ -60,10 +70,33 @@ function findDiaryByCommentToken_(token) {
   }) || null;
 }
 
-function createCommentPage_(message, showForm, token) {
+function findCommentableDiaryByToken_(token) {
+  var diary = findDiaryByCommentToken_(token);
+  if (!diary) return null;
+  return getParticipantsById_()[String(diary.participant_id)] ? diary : null;
+}
+
+function createUniqueCommentSubmissionToken_() {
+  var existing = {};
+  getRows_('Comments').forEach(function(row) {
+    if (row.submission_token) existing[String(row.submission_token)] = true;
+  });
+  for (var attempt = 0; attempt < 5; attempt += 1) {
+    var token = createCommentToken_();
+    if (!existing[token]) return token;
+  }
+  throw new Error('Unable to generate a unique comment submission token.');
+}
+
+function isValidCommentSubmissionToken_(token) {
+  return /^[a-f0-9]{64}$/i.test(String(token));
+}
+
+function createCommentPage_(message, showForm, token, submissionToken) {
   var form = showForm ? [
     '<form method="post">',
     '<input type="hidden" name="token" value="' + escapeHtml_(token) + '">',
+    '<input type="hidden" name="submission_token" value="' + escapeHtml_(submissionToken) + '">',
     '<label for="body">コメント</label>',
     '<textarea id="body" name="body" maxlength="5000" required></textarea>',
     '<button type="submit">匿名で送る</button>',

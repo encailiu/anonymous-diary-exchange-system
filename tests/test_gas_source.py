@@ -194,6 +194,48 @@ def test_processing_comment_resolution_requires_explicit_state() -> None:
     assert json.loads(context.eval("JSON.stringify(updates)")) == ["delivered"]
 
 
+def test_duplicate_comment_post_does_not_send_twice() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var comments = [];
+      var sentComments = 0;
+      withScriptLock_ = function(callback) { return callback(); };
+      findCommentableDiaryByToken_ = function() { return { diary_date: '2026-01-01', participant_id: 'author' }; };
+      getParticipantsById_ = function() { return { author: { participantId: 'author', email: 'author@example.test' } }; };
+      getRows_ = function(name) { return name === 'Comments' ? comments : []; };
+      appendRecord_ = function(name, record) { record._rowNumber = comments.length + 2; comments.push(record); };
+      getSheet_ = function() { return { getLastRow: function() { return comments.length + 1; } }; };
+      updateRecord_ = function() {};
+      sendAnonymousCommentMail_ = function() { sentComments += 1; };
+      notifyAdminsOfError = function() {};
+    ''')
+    token = "a" * 64
+    submission_token = "b" * 64
+    first = context.eval(f"submitAnonymousComment_('{token}', '{submission_token}', 'comment')")
+    second = context.eval(f"submitAnonymousComment_('{token}', '{submission_token}', 'comment')")
+    assert first == second
+    assert context.eval("sentComments") == 1
+    assert context.eval("comments.length") == 1
+
+
+def test_comment_submission_token_is_an_append_only_schema_migration() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    headers = json.loads(context.eval("JSON.stringify(SHEET_DEFINITIONS.Comments)"))
+    assert headers[-1] == "submission_token"
+
+
+def test_inactive_author_comment_link_is_not_commentable() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      findDiaryByCommentToken_ = function() { return { participant_id: 'inactive' }; };
+      getParticipantsById_ = function() { return {}; };
+    ''')
+    assert context.eval("findCommentableDiaryByToken_('" + "a" * 64 + "')") is None
+
+
 def test_matching_handles_fifty_participants_without_duplicates() -> None:
     context = quickjs.Context()
     load_gas_sources(context)

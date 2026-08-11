@@ -5,7 +5,7 @@ var SHEET_DEFINITIONS = {
   DeliveryLog: ['delivery_id', 'diary_date', 'diary_id', 'recipient_participant_id', 'recipient_email', 'status', 'attempted_at', 'delivered_at', 'error'],
   RunLog: ['run_id', 'diary_date', 'status', 'details', 'created_at'],
   AdminNotificationLog: ['notification_id', 'context', 'attempted', 'sent', 'failed', 'status', 'created_at'],
-  Comments: ['comment_id', 'comment_token', 'diary_date', 'body', 'status', 'submitted_at', 'notified_at', 'error']
+  Comments: ['comment_id', 'comment_token', 'diary_date', 'body', 'status', 'submitted_at', 'notified_at', 'error', 'submission_token']
 };
 
 function initializeSpreadsheet() {

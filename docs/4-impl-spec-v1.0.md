@@ -67,6 +67,8 @@
 - 参加者向けURLには `comment_token` だけを含め、日記ID、参加者ID、メールアドレスを含めない。
 - Web Appはコメント投稿者のGoogleアカウント情報を取得・保存しない。
 - コメント本文はHTMLエスケープし、通知は `sendSystemMail` を経由する。
+- GETごとに64文字のランダムな `submission_token` を発行してフォームへ埋め込み、最初のPOST時にCommentsへ保存する。同じ `submission_token` の再POSTは既存コメントを返し、行追加と通知を繰り返さない。
+- 書き手が `active=false` の場合、GET・POST・失敗通知の再送を受け付けない。
 - 通知失敗は `error` として保存して全管理者へ通知し、管理者の明示操作で再送する。
 - 送信結果不明の `processing` は二重通知防止のため自動再送しない。
 - コメント通知の `processing` も、Gmail確認後に管理者が `delivered` または `error` へ明示解決する。
