@@ -83,7 +83,7 @@ def test_retry_sends_only_error_deliveries() -> None:
     context.eval(r'''
       var sentDeliveryIds = [];
       var currentDeliveryId = '';
-      getAcceptedDiariesForDate_ = function() { return [{ diary_id: 'd1', body: 'body' }, { diary_id: 'd2', body: 'body' }]; };
+      getEligibleDiariesForDate_ = function() { return [{ diary_id: 'd1', body: 'body' }, { diary_id: 'd2', body: 'body' }]; };
       getParticipantsById_ = function() { return { p1: { participantId: 'p1', email: 'one@example.test' }, p2: { participantId: 'p2', email: 'two@example.test' } }; };
       getRows_ = function(name) { return name === 'DeliveryLog' ? [
         { _rowNumber: 2, delivery_id: 'failed', diary_date: '2026-01-01', diary_id: 'd1', recipient_participant_id: 'p1', status: 'error' },
@@ -106,7 +106,7 @@ def test_daily_run_records_delivery_failure_as_error() -> None:
     context.eval(r'''
       var recordedStatuses = [];
       withScriptLock_ = function(callback) { return callback(); };
-      ensureMatchesForDate_ = function() { return []; };
+      ensureMatchesForDate_ = function() { return [{ match_type: 'pair' }]; };
       deliverPendingMatches_ = function() { return { delivered: 1, skipped: 0, failed: 1 }; };
       appendRunLog_ = function(date, status) { recordedStatuses.push(status); };
       notifyAdminsOfError = function() {};
@@ -125,6 +125,37 @@ def test_delivered_mail_is_not_reopened_when_participant_is_inactive() -> None:
     ''')
     outcome = context.eval("deliverDiaryOnce_('2026-01-01', { diary_id: 'd1' }, undefined, 'p1')")
     assert outcome == "skipped"
+
+
+def test_inactive_participants_are_excluded_from_matching() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      getAcceptedDiariesForDate_ = function() { return [
+        { diary_id: 'd1', participant_id: 'active' }, { diary_id: 'd2', participant_id: 'inactive' }
+      ]; };
+      getParticipantsById_ = function() { return { active: { participantId: 'active', email: 'active@example.test' } }; };
+    ''')
+    eligible = json.loads(context.eval("JSON.stringify(getEligibleDiariesForDate_('2026-01-01'))"))
+    assert [row["participant_id"] for row in eligible] == ["active"]
+
+
+def test_processing_resolution_requires_explicit_state() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var updates = [];
+      withScriptLock_ = function(callback) { return callback(); };
+      getRows_ = function(name) { return name === 'DeliveryLog' ? [{
+        _rowNumber: 2, delivery_id: 'delivery-1', diary_date: '2026-01-01', status: 'processing'
+      }] : []; };
+      updateRecord_ = function(name, row, record) { updates.push(record.status); };
+      getExistingMatchesForDate_ = function() { return []; };
+      appendRunLog_ = function() {};
+      notifyAdminsOfError = function() {};
+    ''')
+    assert context.eval("resolveProcessingDelivery('delivery-1', 'error')") == "error"
+    assert json.loads(context.eval("JSON.stringify(updates)")) == ["error"]
 
 
 def test_logs_do_not_include_admin_recipient() -> None:
@@ -157,6 +188,8 @@ if __name__ == "__main__":
     test_retry_sends_only_error_deliveries()
     test_daily_run_records_delivery_failure_as_error()
     test_delivered_mail_is_not_reopened_when_participant_is_inactive()
+    test_inactive_participants_are_excluded_from_matching()
+    test_processing_resolution_requires_explicit_state()
     test_logs_do_not_include_admin_recipient()
     test_error_notification_attempts_every_admin()
     test_no_checked_in_clasp_credentials()

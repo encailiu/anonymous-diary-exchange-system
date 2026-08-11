@@ -11,6 +11,14 @@ function runDailyExchangeForDate_(diaryDate) {
   return withScriptLock_(function() {
     try {
       var matches = ensureMatchesForDate_(diaryDate);
+      if (matches.length === 0) {
+        appendRunLogOnce_(diaryDate, 'skipped_no_submissions', 'No eligible diaries.');
+        return { delivered: 0, skipped: 0, failed: 0, processing: 0 };
+      }
+      if (matches.every(function(match) { return String(match.match_type) === 'skipped'; })) {
+        appendRunLogOnce_(diaryDate, 'skipped_one_submission', 'One eligible diary.');
+        return { delivered: 0, skipped: 1, failed: 0, processing: 0 };
+      }
       var deliveryResult = deliverPendingMatches_(diaryDate, matches);
       if (deliveryResult.failed > 0 || deliveryResult.processing > 0) {
         appendRunLog_(diaryDate, 'error', deliveryResult.failed + ' failed and ' + deliveryResult.processing + ' remain processing.');
@@ -36,18 +44,16 @@ function runExchangeForDateFromPrompt() {
 
 function ensureMatchesForDate_(diaryDate) {
   var existingMatches = getExistingMatchesForDate_(diaryDate);
-  var diaries = getAcceptedDiariesForDate_(diaryDate);
+  var diaries = getEligibleDiariesForDate_(diaryDate);
   if (existingMatches.length > 0) {
     validateMatchesForDiaries_(existingMatches, diaries);
     return existingMatches;
   }
   if (diaries.length === 0) {
-    appendRunLog_(diaryDate, 'skipped_no_submissions', 'No accepted diaries.');
     return [];
   }
   if (diaries.length === 1) {
     appendSkippedMatch_(diaryDate, diaries[0]);
-    appendRunLog_(diaryDate, 'skipped_one_submission', 'One accepted diary.');
     return getExistingMatchesForDate_(diaryDate);
   }
   var skipHistory = getSkipHistory_();
@@ -60,7 +66,7 @@ function ensureMatchesForDate_(diaryDate) {
 
 function deliverPendingMatches_(diaryDate, matches) {
   var diariesById = {};
-  getAcceptedDiariesForDate_(diaryDate).forEach(function(diary) { diariesById[String(diary.diary_id)] = diary; });
+  getEligibleDiariesForDate_(diaryDate).forEach(function(diary) { diariesById[String(diary.diary_id)] = diary; });
   var participantsById = getParticipantsById_();
   var result = { delivered: 0, skipped: 0, failed: 0, processing: 0 };
   matches.filter(function(match) { return String(match.match_type) === 'pair'; }).forEach(function(match) {
@@ -81,7 +87,7 @@ function recordDeliveryOutcome_(result, outcome) {
 }
 
 function deliverDiaryOnce_(diaryDate, diary, recipient, recipientParticipantId) {
-  if (!diary) throw new Error('Match references a missing diary.');
+  if (!diary) throw new Error('Match references a missing diary or inactive author.');
   var existingStatus = getExistingDeliveryStatus_(diaryDate, diary.diary_id, recipientParticipantId);
   if (existingStatus) {
     if (existingStatus === 'error') return 'error';
@@ -127,7 +133,7 @@ function retryFailedDeliveriesForDate(diaryDate) {
 
 function retryFailedDeliveriesForDate_(diaryDate) {
   var diariesById = {};
-  getAcceptedDiariesForDate_(diaryDate).forEach(function(diary) { diariesById[String(diary.diary_id)] = diary; });
+  getEligibleDiariesForDate_(diaryDate).forEach(function(diary) { diariesById[String(diary.diary_id)] = diary; });
   var participantsById = getParticipantsById_();
   var result = { delivered: 0, skipped: 0, failed: 0, processing: 0 };
   getRows_('DeliveryLog').filter(function(row) {
@@ -197,6 +203,70 @@ function updateMatchDeliveryStatuses_(diaryDate, matches) {
   });
 }
 
+function repairIncompleteMatchesForDate(diaryDate) {
+  if (!isValidDateKey_(String(diaryDate))) throw new Error('Date must be a valid YYYY-MM-DD date.');
+  try {
+    return withScriptLock_(function() {
+      var dateKey = String(diaryDate);
+      if (getRows_('DeliveryLog').some(function(row) { return String(row.diary_date) === dateKey; })) {
+        throw new Error('Matches cannot be rebuilt after delivery processing has started.');
+      }
+      var existing = getExistingMatchesForDate_(dateKey);
+      var diaries = getEligibleDiariesForDate_(dateKey);
+      var valid = false;
+      try { validateMatchesForDiaries_(existing, diaries); valid = existing.length > 0; } catch (ignored) {}
+      if (valid) return { repaired: false, matchCount: existing.length };
+      deleteMatchesForDate_(dateKey);
+      var rebuilt = ensureMatchesForDate_(dateKey);
+      appendRunLog_(dateKey, 'matches_repaired', rebuilt.length + ' match row(s) rebuilt before delivery.');
+      return { repaired: true, matchCount: rebuilt.length };
+    });
+  } catch (error) {
+    notifyAdminsOfError('repairIncompleteMatches', error);
+    throw error;
+  }
+}
+
+function resolveProcessingDelivery(deliveryId, resolution) {
+  if (resolution !== 'delivered' && resolution !== 'error') throw new Error('Resolution must be delivered or error.');
+  try {
+    return withScriptLock_(function() {
+      var delivery = getRows_('DeliveryLog').find(function(row) { return String(row.delivery_id) === String(deliveryId); });
+      if (!delivery || String(delivery.status) !== 'processing') throw new Error('A processing delivery with that ID was not found.');
+      updateRecord_('DeliveryLog', delivery._rowNumber, {
+        status: resolution,
+        delivered_at: resolution === 'delivered' ? formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss') : '',
+        error: resolution === 'error' ? 'Administrator confirmed that the message was not sent.' : ''
+      });
+      updateMatchDeliveryStatuses_(String(delivery.diary_date), getExistingMatchesForDate_(String(delivery.diary_date)));
+      appendRunLog_(String(delivery.diary_date), 'processing_resolved', 'A processing delivery was resolved as ' + resolution + '.');
+      return resolution;
+    });
+  } catch (error) {
+    notifyAdminsOfError('resolveProcessingDelivery', error);
+    throw error;
+  }
+}
+
+function repairMatchesFromPrompt() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt('未配信のマッチを再構築', '日記の日付を YYYY-MM-DD 形式で入力してください。配信処理開始後は実行できません。', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  var result = repairIncompleteMatchesForDate(response.getResponseText().trim());
+  ui.alert(result.repaired ? result.matchCount + '件のマッチ行を再構築しました。' : '既存マッチは正常です。');
+}
+
+function resolveProcessingFromPrompt() {
+  var ui = SpreadsheetApp.getUi();
+  var idResponse = ui.prompt('processingを確認済みにする', 'DeliveryLogの delivery_id を入力してください。', ui.ButtonSet.OK_CANCEL);
+  if (idResponse.getSelectedButton() !== ui.Button.OK) return;
+  var resolutionResponse = ui.prompt('確認結果', 'Gmailで送信済みなら delivered、未送信を確認できた場合だけ error と入力してください。', ui.ButtonSet.OK_CANCEL);
+  if (resolutionResponse.getSelectedButton() !== ui.Button.OK) return;
+  var resolution = resolutionResponse.getResponseText().trim().toLowerCase();
+  resolveProcessingDelivery(idResponse.getResponseText().trim(), resolution);
+  ui.alert('processing を ' + resolution + ' に更新しました。');
+}
+
 function appendRunLogSafely_(diaryDate, status, details) {
   try { appendRunLog_(diaryDate, status, details); } catch (ignored) { console.error('RunLog write failed.'); }
 }
@@ -209,6 +279,8 @@ function onOpen() {
     .addItem('日次交換を実行', 'runDailyExchange')
     .addItem('指定日を実行（検証用）', 'runExchangeForDateFromPrompt')
     .addItem('失敗した配信を再送', 'retryFailedDeliveriesFromPrompt')
+    .addItem('未配信のマッチを再構築', 'repairMatchesFromPrompt')
+    .addItem('processingを確認済みにする', 'resolveProcessingFromPrompt')
     .addItem('自己テストを実行', 'runMvpSelfTests')
     .addToUi();
 }

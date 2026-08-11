@@ -45,3 +45,10 @@ function getAcceptedDiariesForDate_(diaryDate) {
     return String(row.diary_date) === diaryDate && String(row.status) === 'accepted';
   });
 }
+
+function getEligibleDiariesForDate_(diaryDate) {
+  var activeParticipants = getParticipantsById_();
+  return getAcceptedDiariesForDate_(diaryDate).filter(function(diary) {
+    return Object.prototype.hasOwnProperty.call(activeParticipants, String(diary.participant_id));
+  });
+}

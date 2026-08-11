@@ -67,3 +67,17 @@ function validateMatchesForDiaries_(matches, diaries) {
 function appendRunLog_(diaryDate, status, details) {
   appendRecord_('RunLog', { run_id: createId_(), diary_date: diaryDate, status: status, details: details, created_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss') });
 }
+
+function appendRunLogOnce_(diaryDate, status, details) {
+  var exists = getRows_('RunLog').some(function(row) {
+    return String(row.diary_date) === diaryDate && String(row.status) === status;
+  });
+  if (!exists) appendRunLog_(diaryDate, status, details);
+}
+
+function deleteMatchesForDate_(diaryDate) {
+  var sheet = getSheet_('Matches');
+  getExistingMatchesForDate_(diaryDate).map(function(row) { return row._rowNumber; })
+    .sort(function(left, right) { return right - left; })
+    .forEach(function(rowNumber) { sheet.deleteRow(rowNumber); });
+}
