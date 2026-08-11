@@ -24,13 +24,14 @@ EXPECTED_FILES = {
     "errors.gs",
     "main.gs",
     "admin.gs",
+    "comments.gs",
     "tests.gs",
 }
 
 GAS_MOCKS = r'''
 var console = { error: function() {} };
 var Utilities = {
-  getUuid: function() { return 'test-uuid'; },
+  getUuid: function() { return '12345678-1234-4abc-8def-1234567890ab'; },
   formatDate: function(date, timezone, pattern) {
     if (timezone !== 'Asia/Tokyo') throw new Error('Unexpected timezone: ' + timezone);
     var jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
@@ -177,6 +178,25 @@ def test_error_notification_attempts_every_admin() -> None:
     assert json.loads(context.eval("JSON.stringify(notified)")) == ["first@example.test", "second@example.test"]
 
 
+def test_comment_url_exposes_only_random_token() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    token = "a" * 64
+    context.eval(r'''
+      getConfig_ = function() { return { webAppUrl: 'https://script.google.com/macros/s/deployment/exec' }; };
+    ''')
+    url = context.eval(f"getCommentUrl_('{token}')")
+    assert url == f"https://script.google.com/macros/s/deployment/exec?token={token}"
+    assert "diary" not in url and "participant" not in url and "email" not in url
+
+
+def test_comment_source_does_not_read_google_identity() -> None:
+    source = (SOURCE_DIR / "comments.gs").read_text(encoding="utf-8")
+    assert "Session." not in source
+    assert "getActiveUser" not in source
+    assert "getEffectiveUser" not in source
+
+
 def test_no_checked_in_clasp_credentials() -> None:
     assert not (ROOT / ".clasp.json").exists(), ".clasp.json must not be committed"
 
@@ -192,5 +212,7 @@ if __name__ == "__main__":
     test_processing_resolution_requires_explicit_state()
     test_logs_do_not_include_admin_recipient()
     test_error_notification_attempts_every_admin()
+    test_comment_url_exposes_only_random_token()
+    test_comment_source_does_not_read_google_identity()
     test_no_checked_in_clasp_credentials()
     print("Local GAS source tests passed.")

@@ -8,7 +8,12 @@ function runMvpSelfTests() {
   testZeroAndOneSubmission_();
   testHtmlEscaping_();
   testDateValidation_();
+  testCommentToken_();
   return 'MVP self-tests passed.';
+}
+
+function testCommentToken_() {
+  assert_(/^[a-f0-9]{64}$/i.test(createCommentToken_()), 'Comment token must contain 64 random hexadecimal characters.');
 }
 
 function testIncompleteMatchesRejected_() {

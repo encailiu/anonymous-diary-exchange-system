@@ -1,9 +1,10 @@
 var SHEET_DEFINITIONS = {
   Participants: ['participant_id', 'email', 'active', 'created_at'],
-  Diaries: ['diary_id', 'diary_date', 'submitted_at', 'participant_id', 'email', 'body', 'status'],
+  Diaries: ['diary_id', 'diary_date', 'submitted_at', 'participant_id', 'email', 'body', 'status', 'comment_token'],
   Matches: ['match_id', 'diary_date', 'match_type', 'left_diary_id', 'right_diary_id', 'left_participant_id', 'right_participant_id', 'status', 'created_at'],
   DeliveryLog: ['delivery_id', 'diary_date', 'diary_id', 'recipient_participant_id', 'recipient_email', 'status', 'attempted_at', 'delivered_at', 'error'],
-  RunLog: ['run_id', 'diary_date', 'status', 'details', 'created_at']
+  RunLog: ['run_id', 'diary_date', 'status', 'details', 'created_at'],
+  Comments: ['comment_id', 'comment_token', 'diary_date', 'body', 'status', 'submitted_at', 'notified_at', 'error']
 };
 
 function initializeSpreadsheet() {
@@ -12,16 +13,21 @@ function initializeSpreadsheet() {
     var sheet = spreadsheet.getSheetByName(name);
     if (!sheet) sheet = spreadsheet.insertSheet(name);
     if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_DEFINITIONS[name]);
-    else validateSheetHeaders_(sheet, name);
+    else migrateAndValidateSheetHeaders_(sheet, name);
   });
 }
 
-function validateSheetHeaders_(sheet, name) {
+function migrateAndValidateSheetHeaders_(sheet, name) {
   var expected = SHEET_DEFINITIONS[name];
-  var actual = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), expected.length)).getValues()[0];
-  var matches = expected.length === actual.length;
-  expected.forEach(function(header, index) { if (actual[index] !== header) matches = false; });
-  if (!matches) throw new Error('Unexpected headers in sheet: ' + name + '.');
+  var actualLength = sheet.getLastColumn();
+  var actual = sheet.getRange(1, 1, 1, actualLength).getValues()[0];
+  actual.forEach(function(header, index) {
+    if (expected[index] !== header) throw new Error('Unexpected headers in sheet: ' + name + '.');
+  });
+  if (actualLength > expected.length) throw new Error('Unexpected headers in sheet: ' + name + '.');
+  if (actualLength < expected.length) {
+    sheet.getRange(1, actualLength + 1, 1, expected.length - actualLength).setValues([expected.slice(actualLength)]);
+  }
 }
 
 function getSheet_(name) {

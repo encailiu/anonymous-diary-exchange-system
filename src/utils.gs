@@ -47,6 +47,22 @@ function createId_() {
   return Utilities.getUuid();
 }
 
+function createCommentToken_() {
+  return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+}
+
+function createUniqueCommentToken_() {
+  var existing = {};
+  getRows_('Diaries').forEach(function(row) {
+    if (row.comment_token) existing[String(row.comment_token)] = true;
+  });
+  for (var attempt = 0; attempt < 5; attempt += 1) {
+    var token = createCommentToken_();
+    if (!existing[token]) return token;
+  }
+  throw new Error('Unable to generate a unique comment token.');
+}
+
 function escapeHtml_(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')

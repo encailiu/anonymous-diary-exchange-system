@@ -16,7 +16,8 @@ function onDiaryFormSubmit(event) {
       appendRecord_('Diaries', {
         diary_id: createId_(), diary_date: diaryDate, submitted_at: formatJst_(submittedAt, 'yyyy-MM-dd HH:mm:ss'),
         participant_id: participant ? participant.participantId : '', email: status === 'accepted' ? email : '',
-        body: status === 'accepted' ? body : '', status: status
+        body: status === 'accepted' ? body : '', status: status,
+        comment_token: status === 'accepted' ? createUniqueCommentToken_() : ''
       });
       return status;
     } catch (error) {
@@ -24,6 +25,15 @@ function onDiaryFormSubmit(event) {
       throw error;
     }
   });
+}
+
+function ensureDiaryCommentToken_(diary) {
+  if (/^[a-f0-9]{64}$/i.test(String(diary.comment_token || ''))) return diary.comment_token;
+  if (!diary._rowNumber || String(diary.status) !== 'accepted') throw new Error('Accepted diary is missing a valid comment token.');
+  var token = createUniqueCommentToken_();
+  updateRecord_('Diaries', diary._rowNumber, { comment_token: token });
+  diary.comment_token = token;
+  return token;
 }
 
 function getDiaryBody_(response, itemTitle) {

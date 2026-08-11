@@ -96,6 +96,7 @@ function deliverDiaryOnce_(diaryDate, diary, recipient, recipientParticipantId) 
     throw new Error('DeliveryLog contains an unknown status.');
   }
   if (!recipient) throw new Error('Match references a participant who is no longer active.');
+  ensureDiaryCommentToken_(diary);
   var delivery = reserveDelivery_(diaryDate, diary.diary_id, recipient);
   if (delivery._existingStatus) {
     if (delivery._existingStatus === 'error') return 'error';
@@ -281,6 +282,7 @@ function onOpen() {
     .addItem('失敗した配信を再送', 'retryFailedDeliveriesFromPrompt')
     .addItem('未配信のマッチを再構築', 'repairMatchesFromPrompt')
     .addItem('processingを確認済みにする', 'resolveProcessingFromPrompt')
+    .addItem('失敗したコメント通知を再送', 'retryFailedCommentNotificationsFromPrompt')
     .addItem('自己テストを実行', 'runMvpSelfTests')
     .addToUi();
 }
