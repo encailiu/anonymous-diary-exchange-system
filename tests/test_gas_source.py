@@ -281,6 +281,12 @@ def test_daily_lock_failure_notifies_admins() -> None:
     assert context.eval("notifiedContext") == "runDailyExchange"
 
 
+def test_daily_trigger_is_safely_after_the_submission_cutoff() -> None:
+    source = (SOURCE_DIR / "admin.gs").read_text(encoding="utf-8")
+    assert ".atHour(22).nearMinute(20).everyDays(1)" in source
+    assert ".nearMinute(5)" not in source
+
+
 def test_comment_url_exposes_only_random_token() -> None:
     context = quickjs.Context()
     load_gas_sources(context)

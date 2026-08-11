@@ -7,7 +7,10 @@ function installTriggers() {
       if (handler === 'onDiaryFormSubmit' || handler === 'runDailyExchange') ScriptApp.deleteTrigger(trigger);
     });
     ScriptApp.newTrigger('onDiaryFormSubmit').forForm(FormApp.openById(config.formId)).onFormSubmit().create();
-    ScriptApp.newTrigger('runDailyExchange').timeBased().atHour(22).nearMinute(5).everyDays(1).create();
+    // nearMinute may run approximately 15 minutes before or after the requested
+    // minute. Request 22:20 so the daily exchange never runs before the 22:00
+    // submission cutoff.
+    ScriptApp.newTrigger('runDailyExchange').timeBased().atHour(22).nearMinute(20).everyDays(1).create();
   } catch (error) {
     notifyAdminsOfError('installTriggers', error);
     throw error;
