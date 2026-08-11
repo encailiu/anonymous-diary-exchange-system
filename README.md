@@ -51,6 +51,10 @@ GAS の実装は次の責務ごとに分割します。
 | `admin.gs` | トリガー、管理メニュー、アーカイブ、削除 |
 | `utils.gs` | トークン、ロック、JST日時処理 |
 
+## 開発について
+
+本リポジトリはAIと協働して開発しています。初期の仕様検討には [ChatGPT](https://chatgpt.com/) と [Gemini](https://gemini.google.com/) を利用し、実装およびドキュメントのメンテナンスには [Codex CLI](https://github.com/openai/codex) を活用しています。
+
 ## ドキュメント
 
 - [運用者向けセットアップマニュアル](SETUP.md)
