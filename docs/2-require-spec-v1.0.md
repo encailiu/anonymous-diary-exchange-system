@@ -63,7 +63,7 @@
 ## 8. メール配信
 - 22:05頃に相手の日記本文・写真・コメントリンクをメール配信。
 - 送信にはGAS標準のGmailを利用し、Googleの標準機能だけで運用する。
-- **二重送信防止**: `delivered` フラグと `DeliveryLog` で確実に管理する。
+- **二重送信防止**: `DeliveryLog.status` を日記・受信者単位の配信状態の正本とし、送信前の `processing`、成功後の `delivered`、失敗後の `error` を記録する。`Matches.status` は対応する配信の集約状態として同期する。
 
 ---
 

@@ -2,14 +2,14 @@
 
 ## プロジェクト概要
 
-Google Forms、Google Sheets、Google Apps Script（GAS）、Google Drive、Gmail だけで運用する、固定参加者向けの匿名日記ランダム交換システムです。対象タイムゾーンは **Asia/Tokyo（JST）** です。
+Google Forms、Google Sheets、Google Apps Script（GAS）、Google Drive、Gmail、Google Slides などのGoogle標準機能だけで運用する、固定参加者向けの匿名日記ランダム交換システムです。対象タイムゾーンは **Asia/Tokyo（JST）** です。
 
 ## 最優先の不変条件
 
 実装・レビュー・テストでは、次の順に優先してください。
 
 1. **匿名性**: 参加者に氏名、メールアドレス、各種ID、管理用URL、Googleアカウント情報を表示・送信・ログ出力しない。
-2. **誤配信・二重送信防止**: `delivered` と `DeliveryLog` を送信前後で一貫して管理し、再実行しても同じ日記を二重配信しない。
+2. **誤配信・二重送信防止**: `DeliveryLog.status` を配信状態の正本として送信前後で一貫して管理し、`Matches.status` を集約状態として同期する。再実行しても同じ日記を二重配信しない。
 3. **無料運用**: 有料インフラ・有料外部APIを追加しない。Google の標準機能で完結させる。
 4. **障害通知**: 例外や送信失敗は全 `ADMIN_EMAILS` 宛てに即時通知し、原因と処理コンテキストを残す。
 5. **保守性**: アーカイブ完了を確認してから元データを削除し、指定日以後のデータには触れない。
