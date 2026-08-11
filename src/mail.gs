@@ -64,8 +64,11 @@ function rasterizePhotoBlobs_(sourceBlobs) {
       return response.getBlob().setName('anonymous-photo-' + (item.index + 1) + '.png');
     });
   } finally {
-    try { DriveApp.getFileById(presentationId).setTrashed(true); }
-    catch (ignored) { console.error('Temporary photo presentation cleanup failed.'); }
+    try {
+      DriveApp.getFileById(presentationId).setTrashed(true);
+    } catch (error) {
+      throw new Error('Temporary photo presentation cleanup failed: ' + (error.message || String(error)));
+    }
   }
 }
 

@@ -8,13 +8,18 @@ var SHEET_DEFINITIONS = {
 };
 
 function initializeSpreadsheet() {
-  var spreadsheet = getSpreadsheet_();
-  Object.keys(SHEET_DEFINITIONS).forEach(function(name) {
-    var sheet = spreadsheet.getSheetByName(name);
-    if (!sheet) sheet = spreadsheet.insertSheet(name);
-    if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_DEFINITIONS[name]);
-    else migrateAndValidateSheetHeaders_(sheet, name);
-  });
+  try {
+    var spreadsheet = getSpreadsheet_();
+    Object.keys(SHEET_DEFINITIONS).forEach(function(name) {
+      var sheet = spreadsheet.getSheetByName(name);
+      if (!sheet) sheet = spreadsheet.insertSheet(name);
+      if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_DEFINITIONS[name]);
+      else migrateAndValidateSheetHeaders_(sheet, name);
+    });
+  } catch (error) {
+    notifyAdminsOfError('initializeSpreadsheet', error);
+    throw error;
+  }
 }
 
 function migrateAndValidateSheetHeaders_(sheet, name) {
