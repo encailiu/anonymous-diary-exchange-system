@@ -38,14 +38,6 @@ function runDailyExchangeForDate_(diaryDate) {
   }
 }
 
-function runExchangeForDateFromPrompt() {
-  var ui = SpreadsheetApp.getUi();
-  var response = ui.prompt('指定日を実行', '日記の日付を YYYY-MM-DD 形式で入力してください。検証時だけ使用してください。', ui.ButtonSet.OK_CANCEL);
-  if (response.getSelectedButton() !== ui.Button.OK) return;
-  runDailyExchangeForDate(response.getResponseText().trim());
-  ui.alert('指定日の交換処理を実行しました。RunLog と DeliveryLog を確認してください。');
-}
-
 function ensureMatchesForDate_(diaryDate) {
   var existingMatches = getExistingMatchesForDate_(diaryDate);
   var diaries = getEligibleDiariesForDate_(diaryDate);
@@ -312,22 +304,4 @@ function resolveProcessingFromPrompt() {
 
 function appendRunLogSafely_(diaryDate, status, details) {
   try { appendRunLog_(diaryDate, status, details); } catch (ignored) { console.error('RunLog write failed.'); }
-}
-
-function onOpen() {
-  SpreadsheetApp.getUi().createMenu('匿名日記システム')
-    .addItem('シートを初期化', 'initializeSpreadsheet')
-    .addItem('参加者を追加', 'addParticipantFromPrompt')
-    .addItem('トリガーを設定', 'installTriggers')
-    .addItem('日次交換を実行', 'runDailyExchange')
-    .addItem('指定日を実行（検証用）', 'runExchangeForDateFromPrompt')
-    .addItem('失敗した配信を再送', 'retryFailedDeliveriesFromPrompt')
-    .addItem('未配信のマッチを再構築', 'repairMatchesFromPrompt')
-    .addItem('processingを確認済みにする', 'resolveProcessingFromPrompt')
-    .addItem('失敗したコメント通知を再送', 'retryFailedCommentNotificationsFromPrompt')
-    .addItem('コメント通知のprocessingを確認', 'resolveProcessingCommentFromPrompt')
-    .addItem('旧データをアーカイブして削除', 'archiveOldDataFromPrompt')
-    .addItem('管理者通知をテスト', 'sendAdminAlertTest')
-    .addItem('自己テストを実行', 'runMvpSelfTestsFromMenu')
-    .addToUi();
 }
