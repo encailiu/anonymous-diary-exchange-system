@@ -1,6 +1,14 @@
 function runDailyExchange() {
+  return runDailyExchangeForDate_(getExchangeTargetDate_(new Date()));
+}
+
+function runDailyExchangeForDate(diaryDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(diaryDate))) throw new Error('Date must be YYYY-MM-DD.');
+  return runDailyExchangeForDate_(String(diaryDate));
+}
+
+function runDailyExchangeForDate_(diaryDate) {
   return withScriptLock_(function() {
-    var diaryDate = getExchangeTargetDate_(new Date());
     try {
       var matches = ensureMatchesForDate_(diaryDate);
       deliverPendingMatches_(diaryDate, matches);
@@ -11,6 +19,14 @@ function runDailyExchange() {
       throw error;
     }
   });
+}
+
+function runExchangeForDateFromPrompt() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt('指定日を実行', '日記の日付を YYYY-MM-DD 形式で入力してください。検証時だけ使用してください。', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  runDailyExchangeForDate(response.getResponseText().trim());
+  ui.alert('指定日の交換処理を実行しました。RunLog と DeliveryLog を確認してください。');
 }
 
 function ensureMatchesForDate_(diaryDate) {
@@ -78,8 +94,10 @@ function appendRunLogSafely_(diaryDate, status, details) {
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('匿名日記システム')
     .addItem('シートを初期化', 'initializeSpreadsheet')
+    .addItem('参加者を追加', 'addParticipantFromPrompt')
     .addItem('トリガーを設定', 'installTriggers')
     .addItem('日次交換を実行', 'runDailyExchange')
+    .addItem('指定日を実行（検証用）', 'runExchangeForDateFromPrompt')
     .addItem('自己テストを実行', 'runMvpSelfTests')
     .addToUi();
 }

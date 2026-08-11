@@ -18,3 +18,23 @@ function getParticipantsById_() {
   });
   return participants;
 }
+
+function addParticipantFromPrompt() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt('参加者を追加', '参加者のGoogleアカウントのメールアドレスを入力してください。', ui.ButtonSet.OK_CANCEL);
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  var email = normalizeEmail_(response.getResponseText());
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    ui.alert('メールアドレスの形式が正しくありません。');
+    return;
+  }
+  var exists = getRows_('Participants').some(function(row) { return normalizeEmail_(row.email) === email; });
+  if (exists) {
+    ui.alert('このメールアドレスはすでに登録されています。');
+    return;
+  }
+  appendRecord_('Participants', {
+    participant_id: createId_(), email: email, active: 'true', created_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss')
+  });
+  ui.alert('参加者を追加しました。');
+}
