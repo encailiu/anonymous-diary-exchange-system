@@ -224,6 +224,26 @@ def test_duplicate_delivery_log_is_rejected() -> None:
         raise AssertionError("Duplicate DeliveryLog rows must stop delivery")
 
 
+def test_retry_stops_before_sending_duplicate_delivery_log() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var sent = 0;
+      getRows_ = function(name) { return name === 'DeliveryLog' ? [
+        { delivery_id: 'one', diary_date: '2026-01-01', diary_id: 'd1', recipient_participant_id: 'p1', status: 'error' },
+        { delivery_id: 'two', diary_date: '2026-01-01', diary_id: 'd1', recipient_participant_id: 'p1', status: 'error' }
+      ] : []; };
+      sendDiaryExchangeMail_ = function() { sent += 1; };
+    ''')
+    try:
+        context.eval("retryFailedDeliveriesForDate_('2026-01-01')")
+    except quickjs.JSException:
+        pass
+    else:
+        raise AssertionError("Retry must reject duplicate DeliveryLog rows")
+    assert context.eval("sent") == 0
+
+
 def test_logs_do_not_include_admin_recipient() -> None:
     source = (SOURCE_DIR / "errors.gs").read_text(encoding="utf-8")
     assert "failed for ' + email" not in source
@@ -344,6 +364,7 @@ if __name__ == "__main__":
     test_processing_comment_resolution_requires_explicit_state()
     test_matching_handles_fifty_participants_without_duplicates()
     test_duplicate_delivery_log_is_rejected()
+    test_retry_stops_before_sending_duplicate_delivery_log()
     test_logs_do_not_include_admin_recipient()
     test_error_notification_attempts_every_admin()
     test_daily_lock_failure_notifies_admins()

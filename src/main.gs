@@ -161,6 +161,7 @@ function retryFailedDeliveriesForDate(diaryDate) {
 }
 
 function retryFailedDeliveriesForDate_(diaryDate) {
+  validateDeliveryLogForDate_(diaryDate);
   var diariesById = {};
   getEligibleDiariesForDate_(diaryDate).forEach(function(diary) { diariesById[String(diary.diary_id)] = diary; });
   var participantsById = getParticipantsById_();
