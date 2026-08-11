@@ -5,7 +5,8 @@ var CONFIG_KEYS = {
   MAIL_PROVIDER: 'MAIL_PROVIDER',
   DIARY_BODY_ITEM_TITLE: 'DIARY_BODY_ITEM_TITLE',
   FORM_ID: 'FORM_ID',
-  WEB_APP_URL: 'WEB_APP_URL'
+  WEB_APP_URL: 'WEB_APP_URL',
+  ARCHIVE_FOLDER_ID: 'ARCHIVE_FOLDER_ID'
 };
 
 function getConfig_() {
@@ -23,7 +24,8 @@ function getConfig_() {
     mailProvider: properties.getProperty(CONFIG_KEYS.MAIL_PROVIDER) || 'gmail',
     diaryBodyItemTitle: properties.getProperty(CONFIG_KEYS.DIARY_BODY_ITEM_TITLE) || '日記本文',
     formId: properties.getProperty(CONFIG_KEYS.FORM_ID) || '',
-    webAppUrl: properties.getProperty(CONFIG_KEYS.WEB_APP_URL) || ''
+    webAppUrl: properties.getProperty(CONFIG_KEYS.WEB_APP_URL) || '',
+    archiveFolderId: properties.getProperty(CONFIG_KEYS.ARCHIVE_FOLDER_ID) || ''
   };
 }
 

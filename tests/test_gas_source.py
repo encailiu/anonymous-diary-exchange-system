@@ -32,6 +32,8 @@ GAS_MOCKS = r'''
 var console = { error: function() {} };
 var Utilities = {
   getUuid: function() { return '12345678-1234-4abc-8def-1234567890ab'; },
+  DigestAlgorithm: { SHA_256: 'SHA_256' },
+  Charset: { UTF_8: 'UTF_8' },
   formatDate: function(date, timezone, pattern) {
     if (timezone !== 'Asia/Tokyo') throw new Error('Unexpected timezone: ' + timezone);
     var jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
@@ -197,6 +199,20 @@ def test_comment_source_does_not_read_google_identity() -> None:
     assert "getEffectiveUser" not in source
 
 
+def test_archive_cutoff_and_csv_safety() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    selected = json.loads(context.eval(r'''JSON.stringify(selectArchiveRows_([
+      { diary_date: '2025-12-31', value: 'old' },
+      { diary_date: '2026-01-01', value: 'boundary' },
+      { diary_date: '2026-01-02', value: 'new' }
+    ], '2026-01-01'))'''))
+    assert [row["value"] for row in selected] == ["old"]
+    csv = context.eval(r'''recordsToCsv_(['body'], [{ body: '=IMPORTDATA("https://example.test")' }, { body: 'a,"b"\nline' }])''')
+    assert "'=IMPORTDATA" in csv
+    assert '"a,""b""\nline"' in csv
+
+
 def test_no_checked_in_clasp_credentials() -> None:
     assert not (ROOT / ".clasp.json").exists(), ".clasp.json must not be committed"
 
@@ -214,5 +230,6 @@ if __name__ == "__main__":
     test_error_notification_attempts_every_admin()
     test_comment_url_exposes_only_random_token()
     test_comment_source_does_not_read_google_identity()
+    test_archive_cutoff_and_csv_safety()
     test_no_checked_in_clasp_credentials()
     print("Local GAS source tests passed.")

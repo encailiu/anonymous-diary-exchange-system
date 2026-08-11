@@ -283,6 +283,7 @@ function onOpen() {
     .addItem('未配信のマッチを再構築', 'repairMatchesFromPrompt')
     .addItem('processingを確認済みにする', 'resolveProcessingFromPrompt')
     .addItem('失敗したコメント通知を再送', 'retryFailedCommentNotificationsFromPrompt')
+    .addItem('旧データをアーカイブして削除', 'archiveOldDataFromPrompt')
     .addItem('自己テストを実行', 'runMvpSelfTests')
     .addToUi();
 }
