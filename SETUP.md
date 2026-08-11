@@ -96,6 +96,7 @@ Apps Script左側の「プロジェクトの設定」→「スクリプト プ�
    - `Matches`
    - `DeliveryLog`
    - `RunLog`
+   - `AdminNotificationLog`
    - `Comments`
 5. Spreadsheetを再読み込みし、「匿名日記システム」メニューが表示されることを確認します。
 

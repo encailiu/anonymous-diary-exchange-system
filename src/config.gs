@@ -37,5 +37,10 @@ function getSpreadsheet_() {
 
 function parseEmailList_(value) {
   if (!value) return [];
-  return value.split(',').map(normalizeEmail_).filter(function(email) { return email !== ''; });
+  var seen = {};
+  return value.split(',').map(normalizeEmail_).filter(function(email) {
+    if (email === '' || seen[email]) return false;
+    seen[email] = true;
+    return true;
+  });
 }

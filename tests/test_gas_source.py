@@ -257,11 +257,31 @@ def test_error_notification_attempts_every_admin() -> None:
       PropertiesService = { getScriptProperties: function() { return {
         getProperty: function(key) { return key === 'ADMIN_EMAILS' ? 'first@example.test,second@example.test' : ''; }
       }; } };
+      var notificationFailures = [];
+      recordAdminNotificationFailure_ = function(context, attempted, sent, failed, status) {
+        notificationFailures.push({ context: context, attempted: attempted, sent: sent, failed: failed, status: status });
+      };
       sendSystemMail = function(to) { notified.push(to); if (notified.length === 1) throw new Error('mail failure'); };
     ''')
     result = json.loads(context.eval("JSON.stringify(notifyAdminsOfError('test', new Error('failure')))") )
     assert json.loads(context.eval("JSON.stringify(notified)")) == ["first@example.test", "second@example.test"]
     assert result == {"attempted": 2, "sent": 1, "failed": 1, "configurationError": False}
+    assert json.loads(context.eval("JSON.stringify(notificationFailures)")) == [{
+        "context": "test", "attempted": 2, "sent": 1, "failed": 1, "status": "delivery_error"
+    }]
+
+
+def test_admin_email_list_is_normalized_and_deduplicated() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    emails = json.loads(context.eval("JSON.stringify(parseEmailList_(' First@Example.test,first@example.test, second@example.test '))"))
+    assert emails == ["first@example.test", "second@example.test"]
+
+
+def test_notification_failure_log_contains_no_recipient_address() -> None:
+    source = (SOURCE_DIR / "errors.gs").read_text(encoding="utf-8")
+    record_source = source[source.index("function recordAdminNotificationFailure_"):]
+    assert "email" not in record_source.lower()
 
 
 def test_daily_lock_failure_notifies_admins() -> None:

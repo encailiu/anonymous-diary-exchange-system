@@ -39,7 +39,7 @@
 - [ ] 合格 / [ ] 不合格 — Spreadsheetを閲覧・編集できるのは管理者だけ。
 - [ ] 合格 / [ ] 不合格 — アーカイブフォルダは「制限付き」で、共有先は管理者だけ。
 - [ ] 合格 / [ ] 不合格 — 参加者へ管理URLやScript Propertiesを渡していない。
-- [ ] 合格 / [ ] 不合格 — `Participants`、`Diaries`、`Matches`、`DeliveryLog`、`RunLog`、`Comments` の各シートがある。
+- [ ] 合格 / [ ] 不合格 — `Participants`、`Diaries`、`Matches`、`DeliveryLog`、`RunLog`、`AdminNotificationLog`、`Comments` の各シートがある。
 
 ## 4. 組み込み自己テストを実行する
 
@@ -59,6 +59,7 @@
 
 - [ ] 合格 / [ ] 不合格 — 全管理者が通知を受信した。
 - [ ] 合格 / [ ] 不合格 — 通知を受けなかった管理者が1人もいない。
+- [ ] 合格 / [ ] 不合格 — 同じ管理者アドレスを大小文字違いで重複設定しても通知は1通だけになる。
 
 ## 6. 2人で本文と写真を投稿する
 

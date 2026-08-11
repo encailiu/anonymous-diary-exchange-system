@@ -12,9 +12,10 @@
 ## Phase 1: 基盤・設定
 
 - [x] Script PropertiesからSpreadsheet ID、複数管理者、タイムゾーン、メール設定を取得する。
-- [x] `Participants`、`Diaries`、`Matches`、`DeliveryLog`、`RunLog` の初期化を実装する。
+- [x] `Participants`、`Diaries`、`Matches`、`DeliveryLog`、`RunLog`、`AdminNotificationLog`、`Comments` の初期化を実装する。
 - [x] `sendSystemMail()` にメール送信を集約する。
 - [x] 例外時に全管理者へ通知する実装と、集約メール送信経路を追加する。
+- [x] 管理者通知の宛先重複を除去し、通知失敗を個人情報なしで永続記録する。
 - [ ] 検証環境で全管理者への実通知を確認する。
 - [ ] 検証環境でシート初期化と複数管理者通知を確認する。
 

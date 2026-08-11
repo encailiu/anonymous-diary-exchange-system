@@ -4,6 +4,7 @@ var SHEET_DEFINITIONS = {
   Matches: ['match_id', 'diary_date', 'match_type', 'left_diary_id', 'right_diary_id', 'left_participant_id', 'right_participant_id', 'status', 'created_at'],
   DeliveryLog: ['delivery_id', 'diary_date', 'diary_id', 'recipient_participant_id', 'recipient_email', 'status', 'attempted_at', 'delivered_at', 'error'],
   RunLog: ['run_id', 'diary_date', 'status', 'details', 'created_at'],
+  AdminNotificationLog: ['notification_id', 'context', 'attempted', 'sent', 'failed', 'status', 'created_at'],
   Comments: ['comment_id', 'comment_token', 'diary_date', 'body', 'status', 'submitted_at', 'notified_at', 'error']
 };
 
