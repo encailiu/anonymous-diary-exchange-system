@@ -374,7 +374,8 @@ def test_archive_cutoff_and_csv_safety() -> None:
     selected = json.loads(context.eval(r'''JSON.stringify(selectArchiveRows_([
       { diary_date: '2025-12-31', value: 'old' },
       { diary_date: '2026-01-01', value: 'boundary' },
-      { diary_date: '2026-01-02', value: 'new' }
+      { diary_date: '2026-01-02', submitted_at: '2025-12-31 22:00:00', value: 'new' },
+      { diary_date: '2025-99-99', value: 'invalid-date' }
     ], '2026-01-01'))'''))
     assert [row["value"] for row in selected] == ["old"]
     csv = context.eval(r'''recordsToCsv_(['body'], [{ body: '=IMPORTDATA("https://example.test")' }, { body: 'a,"b"\nline' }])''')

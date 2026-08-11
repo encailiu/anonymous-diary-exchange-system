@@ -21,7 +21,7 @@
 
 - `archiveOldData(beforeDate)` 関数を実装。
 - **手順**:
-  1. `Diaries`, `Matches`, `Comments`, `DeliveryLog` より `diary_date` / `submitted_at` < `beforeDate` の行を取得。
+  1. `Diaries`, `Matches`, `Comments`, `DeliveryLog` より、有効な `diary_date` < `beforeDate` の行を取得する。`submitted_at` は削除境界に使用せず、不正・欠落した `diary_date` は対象外とする。
   2. 各シートを個別のCSVへ変換。数式として解釈され得るセルは先頭にシングルクォートを付与する。
   3. 専用Archiveフォルダ内に実行単位のフォルダを作り、4つのCSVとマニフェストを出力。
   4. 各CSVを再読込して内容とSHA-256を確認し、マニフェストへ件数とハッシュを記録する。

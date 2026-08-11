@@ -97,7 +97,7 @@ function archiveOldData_(beforeDate) {
 function selectArchiveRows_(rows, beforeDate) {
   return rows.filter(function(row) {
     var dateKey = String(row.diary_date || '');
-    return /^\d{4}-\d{2}-\d{2}$/.test(dateKey) && dateKey < beforeDate;
+    return isValidDateKey_(dateKey) && dateKey < beforeDate;
   });
 }
 
