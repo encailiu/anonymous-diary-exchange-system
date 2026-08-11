@@ -8,8 +8,9 @@ function runDailyExchangeForDate(diaryDate) {
 }
 
 function runDailyExchangeForDate_(diaryDate) {
-  return withScriptLock_(function() {
-    try {
+  try {
+    return withScriptLock_(function() {
+      try {
       var matches = ensureMatchesForDate_(diaryDate);
       if (matches.length === 0) {
         appendRunLogOnce_(diaryDate, 'skipped_no_submissions', 'No eligible diaries.');
@@ -26,12 +27,15 @@ function runDailyExchangeForDate_(diaryDate) {
         appendRunLog_(diaryDate, 'completed', 'Daily exchange run completed.');
       }
       return deliveryResult;
-    } catch (error) {
-      appendRunLogSafely_(diaryDate, 'error', error.message || String(error));
-      notifyAdminsOfError('runDailyExchange', error);
-      throw error;
-    }
-  });
+      } catch (error) {
+        appendRunLogSafely_(diaryDate, 'error', error.message || String(error));
+        throw error;
+      }
+    });
+  } catch (error) {
+    notifyAdminsOfError('runDailyExchange', error);
+    throw error;
+  }
 }
 
 function runExchangeForDateFromPrompt() {

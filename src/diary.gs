@@ -1,6 +1,6 @@
 function onDiaryFormSubmit(event) {
-  return withScriptLock_(function() {
-    try {
+  try {
+    return withScriptLock_(function() {
       var response = event && event.response;
       if (!response) throw new Error('Form response event is required.');
       var config = getConfig_();
@@ -26,11 +26,11 @@ function onDiaryFormSubmit(event) {
         photo_file_ids: status === 'accepted' ? JSON.stringify(photoFileIds) : ''
       });
       return status;
-    } catch (error) {
-      notifyAdminsOfError('onDiaryFormSubmit', error);
-      throw error;
-    }
-  });
+    });
+  } catch (error) {
+    notifyAdminsOfError('onDiaryFormSubmit', error);
+    throw error;
+  }
 }
 
 function validatePhotoFileIds_(fileIds) {

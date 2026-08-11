@@ -116,10 +116,12 @@ function validateArchiveFolderPrivacy_(folder, adminEmails) {
 function notifyAdminsOfArchive_(beforeDate, manifest, recipients) {
   var summary = manifest.files.map(function(file) { return file.sheet + ': ' + file.rowCount + ' rows'; }).join('\n');
   var body = 'アーカイブと対象行の削除が完了しました。\n基準日: ' + beforeDate + '\n\n' + summary;
+  var failed = 0;
   recipients.forEach(function(email) {
     try { sendSystemMail(email, '【完了】匿名日記システムのアーカイブ', body); }
-    catch (ignored) { console.error('Archive completion notification failed.'); }
+    catch (ignored) { failed += 1; console.error('Archive completion notification failed.'); }
   });
+  if (failed > 0) throw new Error('Archive completed, but ' + failed + ' administrator notification(s) failed.');
 }
 
 function archiveOldDataFromPrompt() {
@@ -137,6 +139,9 @@ function archiveOldDataFromPrompt() {
 }
 
 function sendAdminAlertTest() {
-  notifyAdminsOfError('管理者通知テスト', new Error('これは動作確認用の通知です。システム障害ではありません。'));
-  SpreadsheetApp.getUi().alert('管理者通知テストを送信しました。ADMIN_EMAILSの全員で受信を確認してください。');
+  var result = notifyAdminsOfError('管理者通知テスト', new Error('これは動作確認用の通知です。システム障害ではありません。'));
+  if (result.configurationError || result.failed > 0) {
+    throw new Error('管理者通知テストに失敗しました。Apps Scriptの実行ログとADMIN_EMAILSを確認してください。');
+  }
+  SpreadsheetApp.getUi().alert(result.sent + '人の管理者へ通知を送信しました。全員の受信を確認してください。');
 }

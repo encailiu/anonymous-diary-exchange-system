@@ -239,8 +239,26 @@ def test_error_notification_attempts_every_admin() -> None:
       }; } };
       sendSystemMail = function(to) { notified.push(to); if (notified.length === 1) throw new Error('mail failure'); };
     ''')
-    context.eval("notifyAdminsOfError('test', new Error('failure'))")
+    result = json.loads(context.eval("JSON.stringify(notifyAdminsOfError('test', new Error('failure')))") )
     assert json.loads(context.eval("JSON.stringify(notified)")) == ["first@example.test", "second@example.test"]
+    assert result == {"attempted": 2, "sent": 1, "failed": 1, "configurationError": False}
+
+
+def test_daily_lock_failure_notifies_admins() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    context.eval(r'''
+      var notifiedContext = '';
+      withScriptLock_ = function() { throw new Error('lock unavailable'); };
+      notifyAdminsOfError = function(context) { notifiedContext = context; };
+    ''')
+    try:
+        context.eval("runDailyExchangeForDate_('2026-01-01')")
+    except quickjs.JSException:
+        pass
+    else:
+        raise AssertionError("A lock failure must remain an error")
+    assert context.eval("notifiedContext") == "runDailyExchange"
 
 
 def test_comment_url_exposes_only_random_token() -> None:
@@ -328,6 +346,7 @@ if __name__ == "__main__":
     test_duplicate_delivery_log_is_rejected()
     test_logs_do_not_include_admin_recipient()
     test_error_notification_attempts_every_admin()
+    test_daily_lock_failure_notifies_admins()
     test_comment_url_exposes_only_random_token()
     test_comment_source_does_not_read_google_identity()
     test_archive_cutoff_and_csv_safety()
