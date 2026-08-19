@@ -22,7 +22,11 @@ function getParticipantsById_() {
 function addParticipantFromPrompt() {
   try {
     var ui = SpreadsheetApp.getUi();
-    var response = ui.prompt('参加者を追加', '参加者のGoogleアカウントのメールアドレスを入力してください。', ui.ButtonSet.OK_CANCEL);
+    var response = ui.prompt(
+      '参加者を追加',
+      '参加者本人が投稿用Google Formへのログイン・投稿に使用するGoogleアカウントと、完全に同じメールアドレスを入力してください。別のメールアドレスでは投稿を受け付けられません。',
+      ui.ButtonSet.OK_CANCEL
+    );
     if (response.getSelectedButton() !== ui.Button.OK) return;
     var email = normalizeEmail_(response.getResponseText());
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
