@@ -9,6 +9,7 @@ function runMvpSelfTests() {
   testZeroAndOneSubmission_();
   testHtmlEscaping_();
   testDateValidation_();
+  testSheetDateNormalization_();
   testCommentToken_();
   return 'MVP self-tests passed.';
 }
@@ -97,6 +98,21 @@ function testDateValidation_() {
   assert_(isValidDateKey_('2026-02-28'), 'A real date must be accepted.');
   assert_(!isValidDateKey_('2026-02-29'), 'An impossible date must be rejected.');
   assert_(!isValidDateKey_('2026-13-01'), 'An impossible month must be rejected.');
+}
+
+function testSheetDateNormalization_() {
+  var sheetDate = new Date('2026-08-19T15:00:00Z');
+  assert_(normalizeDateKey_(sheetDate) === '2026-08-20', 'A Sheets Date must normalize to its JST date key.');
+  assert_(isSameDateKey_(sheetDate, '2026-08-20'), 'A Sheets Date must match the equivalent date key.');
+  assert_(!isSameDateKey_(new Date('invalid'), '2026-08-20'), 'An invalid Date must not match a date key.');
+  assert_(!isSameDateKey_('', ''), 'Missing dates must not match each other.');
+  var archived = selectArchiveRows_([
+    { diary_date: sheetDate },
+    { diary_date: new Date('2026-08-20T15:00:00Z') },
+    { diary_date: 'invalid' }
+  ], '2026-08-21');
+  assert_(archived.length === 1 && archived[0].diary_date === sheetDate,
+    'Archiving must include only valid Sheets dates before the cutoff.');
 }
 
 function sampleDiaries_(participantIds) {

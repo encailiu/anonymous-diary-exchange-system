@@ -33,6 +33,19 @@ function isValidDateKey_(dateKey) {
     date.getUTCMonth() === Number(match[2]) - 1 && date.getUTCDate() === Number(match[3]);
 }
 
+function normalizeDateKey_(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return isNaN(value.getTime()) ? '' : formatJst_(value, 'yyyy-MM-dd');
+  }
+  var dateKey = String(value === null || value === undefined ? '' : value).trim();
+  return isValidDateKey_(dateKey) ? dateKey : '';
+}
+
+function isSameDateKey_(value, expectedDateKey) {
+  var normalizedExpected = normalizeDateKey_(expectedDateKey);
+  return normalizedExpected !== '' && normalizeDateKey_(value) === normalizedExpected;
+}
+
 function withScriptLock_(callback) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) throw new Error('Another exchange operation is already running.');

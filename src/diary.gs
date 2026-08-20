@@ -78,13 +78,13 @@ function getDiaryBody_(response, itemTitle) {
 
 function hasAcceptedDiary_(participantId, diaryDate) {
   return getRows_('Diaries').some(function(row) {
-    return String(row.participant_id) === participantId && String(row.diary_date) === diaryDate && String(row.status) === 'accepted';
+    return String(row.participant_id) === participantId && isSameDateKey_(row.diary_date, diaryDate) && String(row.status) === 'accepted';
   });
 }
 
 function getAcceptedDiariesForDate_(diaryDate) {
   return getRows_('Diaries').filter(function(row) {
-    return String(row.diary_date) === diaryDate && String(row.status) === 'accepted';
+    return isSameDateKey_(row.diary_date, diaryDate) && String(row.status) === 'accepted';
   });
 }
 

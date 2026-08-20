@@ -38,9 +38,11 @@ function submitAnonymousComment_(token, submissionToken, body) {
     if (!diary) throw new Error('Invalid comment token.');
     var author = getParticipantsById_()[String(diary.participant_id)];
     if (!author) throw new Error('Comment target author is no longer active.');
+    var diaryDate = normalizeDateKey_(diary.diary_date);
+    if (!diaryDate) throw new Error('Comment target has an invalid diary date.');
     var record = {
       comment_id: createId_(), comment_token: token, submission_token: submissionToken,
-      diary_date: String(diary.diary_date), body: body,
+      diary_date: diaryDate, body: body,
       status: 'processing', submitted_at: formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss'), notified_at: '', error: ''
     };
     appendRecord_('Comments', record);
@@ -115,7 +117,7 @@ function retryFailedCommentNotificationsForDate(diaryDate) {
     return withScriptLock_(function() {
       var result = { delivered: 0, failed: 0, processing: 0 };
       getRows_('Comments').filter(function(row) {
-        return String(row.diary_date) === String(diaryDate) && String(row.status) === 'error';
+        return isSameDateKey_(row.diary_date, diaryDate) && String(row.status) === 'error';
       }).forEach(function(comment) {
         var diary = findDiaryByCommentToken_(String(comment.comment_token));
         var author = diary && getParticipantsById_()[String(diary.participant_id)];

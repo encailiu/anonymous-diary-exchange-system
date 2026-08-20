@@ -123,7 +123,7 @@ function deliverDiaryOnce_(diaryDate, diary, recipient, recipientParticipantId) 
 
 function getExistingDeliveryStatus_(diaryDate, diaryId, recipientParticipantId) {
   var existing = getRows_('DeliveryLog').filter(function(row) {
-    return String(row.diary_date) === diaryDate && String(row.diary_id) === String(diaryId) &&
+    return isSameDateKey_(row.diary_date, diaryDate) && String(row.diary_id) === String(diaryId) &&
       String(row.recipient_participant_id) === String(recipientParticipantId);
   });
   if (existing.length > 1) throw new Error('DeliveryLog contains duplicate delivery records.');
@@ -133,7 +133,7 @@ function getExistingDeliveryStatus_(diaryDate, diaryId, recipientParticipantId) 
 function validateDeliveryLogForDate_(diaryDate) {
   var keys = {};
   var ids = {};
-  getRows_('DeliveryLog').filter(function(row) { return String(row.diary_date) === diaryDate; }).forEach(function(row) {
+  getRows_('DeliveryLog').filter(function(row) { return isSameDateKey_(row.diary_date, diaryDate); }).forEach(function(row) {
     var id = String(row.delivery_id || '');
     var key = String(row.diary_id) + ':' + String(row.recipient_participant_id);
     if (!id || ids[id] || keys[key]) throw new Error('DeliveryLog contains a missing or duplicate delivery record.');
@@ -159,7 +159,7 @@ function retryFailedDeliveriesForDate_(diaryDate) {
   var participantsById = getParticipantsById_();
   var result = { delivered: 0, skipped: 0, failed: 0, processing: 0 };
   getRows_('DeliveryLog').filter(function(row) {
-    return String(row.diary_date) === diaryDate && String(row.status) === 'error';
+    return isSameDateKey_(row.diary_date, diaryDate) && String(row.status) === 'error';
   }).forEach(function(delivery) {
     var diary = diariesById[String(delivery.diary_id)];
     var recipient = participantsById[String(delivery.recipient_participant_id)];
@@ -207,7 +207,7 @@ function retryFailedDeliveriesFromPrompt() {
 
 function reserveDelivery_(diaryDate, diaryId, recipient) {
   var existing = getRows_('DeliveryLog').filter(function(row) {
-    return String(row.diary_date) === diaryDate && String(row.diary_id) === String(diaryId) && String(row.recipient_participant_id) === String(recipient.participantId);
+    return isSameDateKey_(row.diary_date, diaryDate) && String(row.diary_id) === String(diaryId) && String(row.recipient_participant_id) === String(recipient.participantId);
   });
   if (existing.length > 1) throw new Error('DeliveryLog contains duplicate delivery records.');
   if (existing.length) return { _existingStatus: String(existing[0].status) };
@@ -223,7 +223,7 @@ function reserveDelivery_(diaryDate, diaryId, recipient) {
 
 function updateMatchDeliveryStatuses_(diaryDate, matches) {
   var deliveries = {};
-  getRows_('DeliveryLog').filter(function(row) { return String(row.diary_date) === diaryDate; }).forEach(function(row) {
+  getRows_('DeliveryLog').filter(function(row) { return isSameDateKey_(row.diary_date, diaryDate); }).forEach(function(row) {
     deliveries[String(row.diary_id) + ':' + String(row.recipient_participant_id)] = String(row.status);
   });
   matches.filter(function(match) { return String(match.match_type) === 'pair'; }).forEach(function(match) {
@@ -243,7 +243,7 @@ function repairIncompleteMatchesForDate(diaryDate) {
   try {
     return withScriptLock_(function() {
       var dateKey = String(diaryDate);
-      if (getRows_('DeliveryLog').some(function(row) { return String(row.diary_date) === dateKey; })) {
+      if (getRows_('DeliveryLog').some(function(row) { return isSameDateKey_(row.diary_date, dateKey); })) {
         throw new Error('Matches cannot be rebuilt after delivery processing has started.');
       }
       var existing = getExistingMatchesForDate_(dateKey);
@@ -268,13 +268,15 @@ function resolveProcessingDelivery(deliveryId, resolution) {
     return withScriptLock_(function() {
       var delivery = getRows_('DeliveryLog').find(function(row) { return String(row.delivery_id) === String(deliveryId); });
       if (!delivery || String(delivery.status) !== 'processing') throw new Error('A processing delivery with that ID was not found.');
+      var diaryDate = normalizeDateKey_(delivery.diary_date);
+      if (!diaryDate) throw new Error('DeliveryLog contains an invalid diary date.');
       updateRecord_('DeliveryLog', delivery._rowNumber, {
         status: resolution,
         delivered_at: resolution === 'delivered' ? formatJst_(new Date(), 'yyyy-MM-dd HH:mm:ss') : '',
         error: resolution === 'error' ? 'Administrator confirmed that the message was not sent.' : ''
       });
-      updateMatchDeliveryStatuses_(String(delivery.diary_date), getExistingMatchesForDate_(String(delivery.diary_date)));
-      appendRunLog_(String(delivery.diary_date), 'processing_resolved', 'A processing delivery was resolved as ' + resolution + '.');
+      updateMatchDeliveryStatuses_(diaryDate, getExistingMatchesForDate_(diaryDate));
+      appendRunLog_(diaryDate, 'processing_resolved', 'A processing delivery was resolved as ' + resolution + '.');
       return resolution;
     });
   } catch (error) {

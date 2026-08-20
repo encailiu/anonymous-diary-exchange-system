@@ -1,12 +1,13 @@
 function getExistingMatchesForDate_(diaryDate) {
-  return getRows_('Matches').filter(function(row) { return String(row.diary_date) === diaryDate; });
+  return getRows_('Matches').filter(function(row) { return isSameDateKey_(row.diary_date, diaryDate); });
 }
 
 function getRecentPairKeys_(diaryDate) {
   var earliestDate = addDaysToDateKey_(diaryDate, -7);
   var keys = {};
   getRows_('Matches').forEach(function(row) {
-    if (String(row.match_type) === 'pair' && String(row.diary_date) >= earliestDate && String(row.diary_date) < diaryDate) {
+    var matchDate = normalizeDateKey_(row.diary_date);
+    if (String(row.match_type) === 'pair' && matchDate >= earliestDate && matchDate < diaryDate) {
       keys[pairKey_(row.left_participant_id, row.right_participant_id)] = true;
     }
   });
@@ -95,7 +96,7 @@ function appendRunLog_(diaryDate, status, details) {
 
 function appendRunLogOnce_(diaryDate, status, details) {
   var exists = getRows_('RunLog').some(function(row) {
-    return String(row.diary_date) === diaryDate && String(row.status) === status;
+    return isSameDateKey_(row.diary_date, diaryDate) && String(row.status) === status;
   });
   if (!exists) appendRunLog_(diaryDate, status, details);
 }
