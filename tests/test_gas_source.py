@@ -361,6 +361,27 @@ def test_comment_url_exposes_only_random_token() -> None:
     assert "diary" not in url and "participant" not in url and "email" not in url
 
 
+def test_comment_form_posts_to_deployed_web_app() -> None:
+    context = quickjs.Context()
+    load_gas_sources(context)
+    token = "a" * 64
+    submission_token = "b" * 64
+    context.eval(r'''
+      getConfig_ = function() { return { webAppUrl: 'https://script.google.com/macros/s/deployment/exec' }; };
+      HtmlService = { createHtmlOutput: function(content) { return {
+        content: content,
+        setTitle: function() { return this; }
+      }; } };
+    ''')
+    rendered = context.eval(
+        f"createCommentPage_('message', true, '{token}', '{submission_token}').content"
+    )
+    assert '<form method="post" action="https://script.google.com/macros/s/deployment/exec" target="_top">' in rendered
+    assert f'<input type="hidden" name="token" value="{token}">' in rendered
+    assert f'<input type="hidden" name="submission_token" value="{submission_token}">' in rendered
+    assert "participant_id" not in rendered and "diary_id" not in rendered and "email" not in rendered
+
+
 def test_comment_source_does_not_read_google_identity() -> None:
     source = (SOURCE_DIR / "comments.gs").read_text(encoding="utf-8")
     assert "Session." not in source

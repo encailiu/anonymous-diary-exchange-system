@@ -96,7 +96,7 @@ function isValidCommentSubmissionToken_(token) {
 
 function createCommentPage_(message, showForm, token, submissionToken) {
   var form = showForm ? [
-    '<form method="post">',
+    '<form method="post" action="' + escapeHtml_(getWebAppUrl_()) + '" target="_top">',
     '<input type="hidden" name="token" value="' + escapeHtml_(token) + '">',
     '<input type="hidden" name="submission_token" value="' + escapeHtml_(submissionToken) + '">',
     '<label for="body">コメント</label>',

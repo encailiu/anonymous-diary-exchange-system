@@ -80,11 +80,16 @@ function fitImageToSlide_(image, pageWidth, pageHeight) {
   image.setTop((pageHeight - image.getHeight()) / 2);
 }
 
-function getCommentUrl_(commentToken) {
+function getWebAppUrl_() {
   var webAppUrl = getConfig_().webAppUrl;
   if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/?#]+\/exec$/.test(webAppUrl)) {
     throw new Error('WEB_APP_URL must be the deployed Apps Script /exec URL.');
   }
+  return webAppUrl;
+}
+
+function getCommentUrl_(commentToken) {
+  var webAppUrl = getWebAppUrl_();
   if (!/^[a-f0-9]{64}$/i.test(String(commentToken))) throw new Error('Diary comment token is missing or invalid.');
   return webAppUrl + '?token=' + encodeURIComponent(String(commentToken));
 }
